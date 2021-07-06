@@ -1,0 +1,50 @@
+buildscript {
+  repositories {
+    mavenCentral()
+  }
+  dependencies {
+    classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.13'
+  }
+}
+
+group 'com.jh34ghu43gu'
+version '1.0.0-SNAPSHOT'
+
+//apply plugin: 'com.google.protobuf'
+apply plugin: 'java'
+
+repositories {
+	mavenCentral()
+	maven {
+		url 'https://oss.sonatype.org/content/repositories/snapshots/'
+	}
+}
+
+dependencies {
+	implementation 'in.dragonbra:javasteam:1.0.0-SNAPSHOT'
+	implementation 'org.bouncycastle:bcprov-jdk15on:1.60'
+
+    testImplementation 'junit:junit:4.12'
+    implementation 'com.google.code.gson:gson:2.8.6'
+    implementation 'com.google.protobuf:protobuf-java:3.13.0'
+    
+    implementation 'ch.qos.logback:logback-classic:1.2.3'
+    implementation 'com.googlecode.json-simple:json-simple:1.1.1'
+
+	implementation fileTree(dir: "../GradleLibraries/httpcomponents-client-5.0.1/lib", include: ['*.jar'])
+    implementation files("../GradleLibraries/SteamKit-Java/target/steamkit-dev-SNAPSHOT.jar")
+    implementation files("../GradleLibraries/SteamAuth-Java/target/SteamAuth-0.0.1-SNAPSHOT.jar")
+    
+    //SteamAuth
+    compile 'commons-codec:commons-codec:1.10'
+	implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.8.1'
+	implementation 'com.squareup.okhttp3:okhttp:3.4.1'
+	implementation group: 'com.google.guava', name: 'guava', version: '19.0'
+	
+	//SteamWebHandler
+	implementation 'org.jsoup:jsoup:1.10.3'
+	implementation 'com.squareup.retrofit2:retrofit:2.4.0'
+    implementation 'com.squareup.retrofit2:converter-gson:2.4.0'
+    
+}
+
