@@ -16,5 +16,4 @@
  
  # WARNINGS
  You will be logged out of your desktop account while doing this (family share enabled may stop this).
- Steam auto logs this application out after about 10 minutes, if you have a large amount of item history you will have to login multiple times. Maybe fixed in the future.
  There is an approx. rate limit of 600 /InventoryHistory/ requests per ip per ~12(?) hours. If you have a large trade/market hstory collecting all your files will require multiple days (my main account had 728 requests so thus was done over the course of 2 days). You get 50 results per request so if you want an estimate do your (trades + market history + mvm mission count)/50 and then add another 50-200 depending on how much crafting you do and how long you've played.
