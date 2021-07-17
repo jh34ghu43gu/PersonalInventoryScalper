@@ -24,7 +24,7 @@ dependencies {
 	implementation 'in.dragonbra:javasteam:1.0.0-SNAPSHOT'
 	implementation 'org.bouncycastle:bcprov-jdk15on:1.60'
 
-    testImplementation 'junit:junit:4.12'
+    testImplementation 'junit:junit:4.13.1'
     implementation 'com.google.code.gson:gson:2.8.6'
     implementation 'com.google.protobuf:protobuf-java:3.13.0'
     
@@ -37,9 +37,9 @@ dependencies {
     
     //SteamAuth
     compile 'commons-codec:commons-codec:1.10'
-	implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.8.1'
+	implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.9.10.7'
 	implementation 'com.squareup.okhttp3:okhttp:3.4.1'
-	implementation group: 'com.google.guava', name: 'guava', version: '19.0'
+	implementation group: 'com.google.guava', name: 'guava', version: '30.0-jre'
 	
 	//SteamWebHandler
 	implementation 'org.jsoup:jsoup:1.10.3'
