@@ -131,7 +131,7 @@ public class ConfigHelper {
 		Iterator iterator = set.iterator();
 	    while(iterator.hasNext()) {
 	    	Map.Entry mentry = (Map.Entry)iterator.next();
-	    	log.debug("Adding key '{}' with value '{}' to jsonObject", mentry.getKey(), mentry.getValue());
+	    	//log.debug("Adding key '{}' with value '{}' to jsonObject", mentry.getKey(), mentry.getValue());
 	    	configOptions.put(mentry.getKey(), mentry.getValue());
 	    }
 		
@@ -139,12 +139,12 @@ public class ConfigHelper {
 		JSONObject configObj = new JSONObject();
 		configObj.put("Options", configOptions);
 		try {
-			log.debug("Attempting json file write");
+			//log.debug("Attempting json file write");
 			FileWriter writer = new FileWriter(fileName);
 			writer.write(configObj.toJSONString());
 			writer.flush();
 			writer.close();
-			log.debug("Json file write successful, hashmap cleared");
+			//log.debug("Json file write successful, hashmap cleared");
 			return true;
 		} catch (Exception e) {
 			log.error("Error occured writing json file.");
@@ -192,7 +192,7 @@ public class ConfigHelper {
 	 * @return String value of the option
 	 */
 	public String getOption(String option) {
-		log.debug("Attempting to get option '{}' from hashmap", option);
+		//log.debug("Attempting to get option '{}' from hashmap", option);
 		return options.get(option);
 	}
 	
@@ -203,7 +203,7 @@ public class ConfigHelper {
 	 * @return String value of the option or "Error" if there was an exception
 	 */
 	public String getOptionFromFile(String option) {
-		log.debug("Attempting to get option '{}' from json file", option);
+		//log.debug("Attempting to get option '{}' from json file", option);
 		JSONParser jsonParser = new JSONParser();
         
         try (FileReader reader = new FileReader(fileName))

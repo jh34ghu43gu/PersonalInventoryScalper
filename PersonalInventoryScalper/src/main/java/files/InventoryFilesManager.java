@@ -28,10 +28,34 @@ public class InventoryFilesManager {
 		}
 	}
 	
-	public static long parseAndCreateDoc(Response r, long start_time) throws IOException {
+	public static long getLastTime() {
+		File invDir = new File("InventoryFiles");
+		File[] invFiles = invDir.listFiles();
+		long out = 0;
+		for(File f : invFiles) {
+			String fName = f.getName();
+			fName = fName.replace(".txt", "");
+			Long t = Long.parseLong(fName);
+			if(t > out) { out = t; }
+		}
+		return out;
+	}
+	
+	/**
+	 * @param r
+	 * @param start_time
+	 * @param stop_time
+	 * @return A status code, 22 if signed out, 0 if reached the end, or the next time to parse
+	 * @throws IOException
+	 */
+	public static long parseAndCreateDoc(Response r, long start_time, long stop_time) throws IOException {
 		if(r.statusCode() != 200) {
 			log.warn("Non-OK status code: " + r.statusCode());
 			return r.statusCode();
+		}
+		if(r.parse().title().equalsIgnoreCase("Sign In")) {
+			log.warn("Sign in page recieved, must log back in.");
+			return 22;
 		}
 		try {
 			Element tradeTable = r.parse().getElementById("inventory_history_table");
@@ -51,9 +75,16 @@ public class InventoryFilesManager {
 				lastTime = jsString.substring(startStr, startStr+10);
 			}
 			//Actual parse
+			boolean stop = false;
 			for(Element tradeRow : tradeTable.select("div.tradehistoryrow")) {
 				JSONObject tradeObject = new JSONObject();
 				String date = tradeRow.select("div.tradehistory_date").text();
+				//Break condition for updates, before setting firstTime so we don't write file if we happen to be at a page break
+				if(Utils.dateToUnix(date) < stop_time) {
+					log.info("Passed stop time, breaking...");
+					stop = true;
+					break;
+				}
 				if(firstTime.length() == 0) { firstTime = date; }
 				String event_description = tradeRow.select("div.tradehistory_event_description").text();
 				JSONObject tradePlus = new JSONObject();
@@ -108,6 +139,10 @@ public class InventoryFilesManager {
 			writer.flush();
 			writer.close();
 			log.info("Created " + start_time + ".txt");
+			
+			if(stop) { //Still want to create the doc with what we have
+				return -1;
+			}
 			return Long.parseLong(lastTime);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block

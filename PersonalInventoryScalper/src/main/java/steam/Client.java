@@ -1,12 +1,12 @@
 package steam;
 
-import java.io.FileWriter;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.LoggerFactory;
 
 import ch.qos.logback.classic.Logger;
 import files.ConfigHelper;
+import files.InventoryFilesManager;
 import in.dragonbra.javasteam.enums.EResult;
 import in.dragonbra.javasteam.steam.handlers.steamuser.LogOnDetails;
 import in.dragonbra.javasteam.steam.handlers.steamuser.SteamUser;
@@ -26,6 +26,7 @@ public class Client implements Runnable {
 	private CallbackManager manager;
 	private SteamUser steamUser;
 	private boolean isRunning;
+	private boolean loggedIn;
 	private String username;
 	private String password;
 	private String secret;
@@ -35,11 +36,15 @@ public class Client implements Runnable {
 	private String webApiUserNonce;
 	private SteamWebHandler SWH;
 	
+	private ConfigHelper ch;
+	
 	public Client(String username, String password, String secret, String timeout) {
 		this.username = username;
 		this.password = password;
 		this.secret = secret;
 		this.timeout = Integer.parseInt(timeout);
+		this.ch = new ConfigHelper();
+		this.loggedIn = false;
 	}
 
 	@Override
@@ -59,6 +64,9 @@ public class Client implements Runnable {
 		
         while(isRunning) {
         	manager.runWaitCallbacks(timeout*1000);
+        	if(loggedIn) {
+        		this.inventoryAction();
+        	}
         }
 	}
 
@@ -107,22 +115,27 @@ public class Client implements Runnable {
 		//Startup actions go here if we have any later
 		webApiUserNonce = callback.getWebAPIUserNonce();
 		SWH = SteamWebHandler.getInstance();
+		loggedIn = true;
+		/*
+		SWH = SteamWebHandler.getInstance();
 		SWH.setTimeout(timeout);
 		if(SWH.authenticate(steamClient, webApiUserNonce)) {
 			log.info("Authenticated our SteamWebHandler!");
 			long time;
-			ConfigHelper ch = new ConfigHelper();
+			long stopTime = 0;
 			ch.getOptions();
 			if(ch.getOptionFromFile("NextInventoryTime").length() > 2) {
 				time = Long.parseLong(ch.getOptionFromFile("NextInventoryTime"));
 			} else {
 				time = Utils.getCurrentUnixTime();
+				stopTime = InventoryFilesManager.getLastTime();
+				log.info("Looking to stop at time: " + stopTime);
 			}
 			long oldTime = time;
 			try {
 				do {
 					oldTime = time;
-					time = SWH.getInventoryHistory(time);
+					time = SWH.getInventoryHistory(time, stopTime);
 					if(time == 0) {
 						ch.setOptionToFile("NextInventoryTime", String.valueOf(oldTime));
 						log.info("Time returned 0, timeout for: " + timeout*10 + " seconds before retrying.");
@@ -133,6 +146,7 @@ public class Client implements Runnable {
 						oldTime = 0l; //Switch old time so we can continue with the loop still
 					}
 				} while(oldTime != time && time != -1);
+				ch.setOptionToFile("NextInventoryTime", " ");
 				System.out.println("Finished file creation. Please close and relaunch the application to choose your parsing option.");
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
@@ -140,10 +154,11 @@ public class Client implements Runnable {
 			}
 		} else {
 			log.warn("Failed to authenticate our SteamWebHandler!");
-		}
+		}*/
     }
 
     private void onLoggedOff(LoggedOffCallback callback) {
+    	loggedIn = false;
         System.out.println("Logged off of Steam: " + callback.getResult());
         isRunning = false;
     }
@@ -158,5 +173,66 @@ public class Client implements Runnable {
     
     public SteamClient getSteamClient() {
     	return this.steamClient;
+    }
+    
+    private void inventoryAction() {
+		if(SWH.isAuthenticated()) {
+			long time;
+			long stopTime = 0;
+			
+			ch.getOptions();
+			if(ch.getOptionFromFile("NextInventoryTime").length() > 2) {
+				time = Long.parseLong(ch.getOptionFromFile("NextInventoryTime"));
+			} else {
+				time = Utils.getCurrentUnixTime();
+				stopTime = InventoryFilesManager.getLastTime();
+				log.info("Looking to stop at time: " + stopTime);
+			}
+			long oldTime = time;
+			try {
+				oldTime = time;
+				time = SWH.getInventoryHistory(time, stopTime);
+				if(time == 0) { //0 = no table returned
+					ch.setOptionToFile("NextInventoryTime", String.valueOf(oldTime));
+					log.info("Time returned 0, timeout for: " + timeout*10 + " seconds before retrying.");
+					//log.info("If this is the 2nd time you've seen this message you have been logged out and will need to exit and relog.");
+					TimeUnit.SECONDS.sleep(timeout*10);
+					time = oldTime;
+					log.info("Retrying time: " + time);
+					oldTime = 0l; //Switch old time so we don't stop early
+				} else if(time == 22) { //22 = log in page
+					ch.setOptionToFile("NextInventoryTime", String.valueOf(oldTime));
+					log.info("Recieved sign in page, attempting to log back in...");
+					SWH.unAuth();
+					oldTime = 0l; //Switch old time so we don't stop early
+				} else {
+					ch.setOptionToFile("NextInventoryTime", String.valueOf(time));
+				}
+				
+				if(oldTime == time || time == -1) {
+					ch.setOptionToFile("NextInventoryTime", " ");
+					System.out.println("Finished file creation. Please close and relaunch the application to choose your parsing option.");
+					isRunning = false;
+				}
+				
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		} else {
+			SWH.setTimeout(timeout);
+			if(SWH.authenticate(steamClient, webApiUserNonce)) {
+				log.debug("Authenticated our SteamWebHandler.");
+			} else {
+				log.warn("Failed to authenticate our SteamWebHandler!");
+				try {
+					TimeUnit.SECONDS.sleep(timeout*10);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				return;
+			}
+		}
     }
 }

@@ -75,6 +75,17 @@ public class SteamWebHandler {
     public void setTimeout(int timeout) {
     	this.timeout = timeout;
     }
+    
+    public boolean isAuthenticated() {
+    	return this.authenticated;
+    }
+    
+    /**
+     * Set authenticated to false
+     */
+    public void unAuth() {
+    	this.authenticated = false;
+    }
 
     public static SteamWebHandler getInstance() {
         return ourInstance;
@@ -181,7 +192,7 @@ public class SteamWebHandler {
     }
     
     //https://steamcommunity.com/my/inventoryhistory?start_time=&app[0]=440
-    public long getInventoryHistory(long start_time) {
+    public long getInventoryHistory(long start_time, long stop_time) {
     	final String url = STEAM_COMMUNITY + "my/inventoryhistory?start_time=" + start_time + "&app[0]=440";
 		try {
 			Response response = Jsoup.connect(url)
@@ -192,7 +203,7 @@ public class SteamWebHandler {
 					.data("sessionid", sessionId)
 			        .data("queuetype", "0")
 			        .execute();
-			long time = InventoryFilesManager.parseAndCreateDoc(response, start_time);
+			long time = InventoryFilesManager.parseAndCreateDoc(response, start_time, stop_time);
 			TimeUnit.SECONDS.sleep(timeout);
 			return time;
 		} catch (IOException | InterruptedException e) {

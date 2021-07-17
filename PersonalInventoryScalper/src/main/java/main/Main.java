@@ -22,7 +22,7 @@ public class Main {
 		CH.addOption("Username", " ");
 		CH.addOption("Password", " ");
 		CH.addOption("SecretKey", "Secret Key if you have it to auto generate auth codes");
-		CH.addOption("RateLimit", "5");
+		CH.addOption("RateLimit", "7");
 		CH.addOption("NextInventoryTime", " ");
 		
 		if(!CH.exists()) { //file doesn't exist or the amount of options has changed
