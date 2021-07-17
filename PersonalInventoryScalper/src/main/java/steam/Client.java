@@ -12,6 +12,7 @@ import in.dragonbra.javasteam.steam.handlers.steamuser.LogOnDetails;
 import in.dragonbra.javasteam.steam.handlers.steamuser.SteamUser;
 import in.dragonbra.javasteam.steam.handlers.steamuser.callback.LoggedOffCallback;
 import in.dragonbra.javasteam.steam.handlers.steamuser.callback.LoggedOnCallback;
+import in.dragonbra.javasteam.steam.handlers.steamuser.callback.WebAPIUserNonceCallback;
 import in.dragonbra.javasteam.steam.steamclient.SteamClient;
 import in.dragonbra.javasteam.steam.steamclient.callbackmgr.CallbackManager;
 import in.dragonbra.javasteam.steam.steamclient.callbacks.ConnectedCallback;
@@ -58,16 +59,33 @@ public class Client implements Runnable {
 
         manager.subscribe(LoggedOnCallback.class, this::onLoggedOn);
         manager.subscribe(LoggedOffCallback.class, this::onLoggedOff);
+        
+        manager.subscribe(WebAPIUserNonceCallback.class, this::onWebAPIUserNonce);
 
         isRunning = true;
         steamClient.connect();
-		
+		long retryTime = Utils.getCurrentUnixTime() + timeout + 1;
+        
         while(isRunning) {
         	manager.runWaitCallbacks(timeout*1000);
         	if(loggedIn) {
-        		this.inventoryAction();
+        		if(SWH.isAuthenticated()) {
+        			this.inventoryAction();
+        		} else {
+        			if(Utils.getCurrentUnixTime() > retryTime) {
+        				log.info("Attempting web handler auth");
+        				this.authSWH();
+        				retryTime = Utils.getCurrentUnixTime() + timeout + 1;
+        			}
+        		}
+        		
         	}
         }
+	}
+	
+	private void onWebAPIUserNonce(WebAPIUserNonceCallback callback) {
+		this.webApiUserNonce = callback.getNonce();
+		log.info("Updated callback nonce: " + webApiUserNonce);
 	}
 
 	private void onConnected(ConnectedCallback callback) {
@@ -114,6 +132,7 @@ public class Client implements Runnable {
 		log.info("Login successful!");
 		//Startup actions go here if we have any later
 		webApiUserNonce = callback.getWebAPIUserNonce();
+		log.debug("Callback nonce: " + webApiUserNonce);
 		SWH = SteamWebHandler.getInstance();
 		loggedIn = true;
 		/*
@@ -149,7 +168,6 @@ public class Client implements Runnable {
 				ch.setOptionToFile("NextInventoryTime", " ");
 				System.out.println("Finished file creation. Please close and relaunch the application to choose your parsing option.");
 			} catch (Exception e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		} else {
@@ -204,6 +222,8 @@ public class Client implements Runnable {
 					ch.setOptionToFile("NextInventoryTime", String.valueOf(oldTime));
 					log.info("Recieved sign in page, attempting to log back in...");
 					SWH.unAuth();
+					steamUser.requestWebAPIUserNonce();
+					log.info("Client connected: " + steamClient.isConnected());
 					oldTime = 0l; //Switch old time so we don't stop early
 				} else {
 					ch.setOptionToFile("NextInventoryTime", String.valueOf(time));
@@ -220,19 +240,23 @@ public class Client implements Runnable {
 				e.printStackTrace();
 			}
 		} else {
-			SWH.setTimeout(timeout);
-			if(SWH.authenticate(steamClient, webApiUserNonce)) {
-				log.debug("Authenticated our SteamWebHandler.");
-			} else {
-				log.warn("Failed to authenticate our SteamWebHandler!");
-				try {
-					TimeUnit.SECONDS.sleep(timeout*10);
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				return;
+			authSWH();
+		}
+    }
+    
+    private void authSWH() {
+    	SWH.setTimeout(timeout);
+		if(SWH.authenticate(steamClient, webApiUserNonce)) {
+			log.debug("Authenticated our SteamWebHandler.");
+		} else {
+			log.warn("Failed to authenticate our SteamWebHandler!");
+			try {
+				TimeUnit.SECONDS.sleep(timeout*10);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
+			return;
 		}
     }
 }
