@@ -62,10 +62,16 @@ public class InventoryFilesParser {
 		JSONParser parser = new JSONParser();
 		JSONObject mvmObject = new JSONObject();
 		HashMap<String, Integer> itemsGained = new HashMap<String, Integer>();
+		HashMap<String, Integer> osItemsGained = new HashMap<String, Integer>();
+		HashMap<String, Integer> stItemsGained = new HashMap<String, Integer>();
+		HashMap<String, Integer> meItemsGained = new HashMap<String, Integer>();
+		HashMap<String, Integer> tcItemsGained = new HashMap<String, Integer>();
+		HashMap<String, Integer> ggItemsGained = new HashMap<String, Integer>();
 		for(File f : invFiles) {
 			try {
 				JSONObject obj = (JSONObject) parser.parse(new FileReader(f));
 				Set<String> set = obj.keySet();
+				String operation = "";
 				for(String s : set) {
 					JSONObject trade = (JSONObject) obj.get(s);
 					if(trade.get("event_description").equals("Played MvM Mann Up Mode")) {
@@ -74,6 +80,9 @@ public class InventoryFilesParser {
 						for(String s2 : tradeSet) {
 							JSONObject item = (JSONObject) plusObj.get(s2);
 							String itemName = (String) item.get("itemName");
+							if(itemName.startsWith("Operation")) {
+								operation = itemName;
+							}
 							if(itemsGained.containsKey(itemName)) { //Already in map, iterate
 								int amt = itemsGained.get(itemName)+1;
 								itemsGained.put(itemName, amt);
@@ -81,6 +90,53 @@ public class InventoryFilesParser {
 								itemsGained.put(itemName, 1);
 							}
 						}
+						if(operation.equalsIgnoreCase("Operation Oil Spill Badge")) {
+							for(Map.Entry<String, Integer> entry : itemsGained.entrySet()) {
+								if(osItemsGained.containsKey(entry.getKey())) { //Already in map, iterate
+									int amt = osItemsGained.get(entry.getKey())+1;
+									osItemsGained.put(entry.getKey(), amt);
+								} else { //Not in map, add it
+									osItemsGained.put(entry.getKey(), entry.getValue());
+								}
+							}
+						} else if(operation.equalsIgnoreCase("Operation Steel Trap Badge")) {
+							for(Map.Entry<String, Integer> entry : itemsGained.entrySet()) {
+								if(stItemsGained.containsKey(entry.getKey())) { //Already in map, iterate
+									int amt = stItemsGained.get(entry.getKey())+1;
+									stItemsGained.put(entry.getKey(), amt);
+								} else { //Not in map, add it
+									stItemsGained.put(entry.getKey(), entry.getValue());
+								}
+							}
+						} else if(operation.equalsIgnoreCase("Operation Mecha Engine Badge")) {
+							for(Map.Entry<String, Integer> entry : itemsGained.entrySet()) {
+								if(meItemsGained.containsKey(entry.getKey())) { //Already in map, iterate
+									int amt = meItemsGained.get(entry.getKey())+1;
+									meItemsGained.put(entry.getKey(), amt);
+								} else { //Not in map, add it
+									meItemsGained.put(entry.getKey(), entry.getValue());
+								}
+							}
+						} else if(operation.equalsIgnoreCase("Operation Two Cities Badge")) {
+							for(Map.Entry<String, Integer> entry : itemsGained.entrySet()) {
+								if(tcItemsGained.containsKey(entry.getKey())) { //Already in map, iterate
+									int amt = tcItemsGained.get(entry.getKey())+1;
+									tcItemsGained.put(entry.getKey(), amt);
+								} else { //Not in map, add it
+									tcItemsGained.put(entry.getKey(), entry.getValue());
+								}
+							}
+						} else if(operation.equalsIgnoreCase("Operation Gear Grinder Badge")) {
+							for(Map.Entry<String, Integer> entry : itemsGained.entrySet()) {
+								if(ggItemsGained.containsKey(entry.getKey())) { //Already in map, iterate
+									int amt = ggItemsGained.get(entry.getKey())+1;
+									ggItemsGained.put(entry.getKey(), amt);
+								} else { //Not in map, add it
+									ggItemsGained.put(entry.getKey(), entry.getValue());
+								}
+							}
+						}
+						itemsGained.clear(); //Clear map for next loop
 					}
 				}
 			} catch (FileNotFoundException e) {
@@ -97,9 +153,34 @@ public class InventoryFilesParser {
 				return false;
 			}
 		}
-		for(Map.Entry<String, Integer> entry : itemsGained.entrySet()) {
-			mvmObject.put(entry.getKey(), entry.getValue());
+		//Create objects and put into the mvm object
+		JSONObject os = new JSONObject();
+		for(Map.Entry<String, Integer> entry : osItemsGained.entrySet()) {
+			os.put(entry.getKey(), entry.getValue());
 		}
+		mvmObject.put("Oil Spill", os);
+		JSONObject st = new JSONObject();
+		for(Map.Entry<String, Integer> entry : stItemsGained.entrySet()) {
+			st.put(entry.getKey(), entry.getValue());
+		}
+		mvmObject.put("Steel Trap", st);
+		JSONObject me = new JSONObject();
+		for(Map.Entry<String, Integer> entry : meItemsGained.entrySet()) {
+			me.put(entry.getKey(), entry.getValue());
+		}
+		mvmObject.put("Mecha Engine", me);
+		JSONObject tc = new JSONObject();
+		for(Map.Entry<String, Integer> entry : tcItemsGained.entrySet()) {
+			tc.put(entry.getKey(), entry.getValue());
+		}
+		mvmObject.put("Two Cities", tc);
+		JSONObject gg = new JSONObject();
+		for(Map.Entry<String, Integer> entry : ggItemsGained.entrySet()) {
+			gg.put(entry.getKey(), entry.getValue());
+		}
+		mvmObject.put("Gear Grinder", gg);
+		
+		//Make file
 		try {
 			Gson gson = new GsonBuilder().setPrettyPrinting().create();
 			String s = gson.toJson(mvmObject);
@@ -290,6 +371,13 @@ public class InventoryFilesParser {
 		HashMap<String, Long> battleWornMap = new HashMap<String, Long>();
 		ArrayList<String> reinforced = new ArrayList<String>();
 		HashMap<String, Long> reinforcedMap = new HashMap<String, Long>();
+		
+		ArrayList<String> tcWeapons = new ArrayList<String>();
+		HashMap<String, Long> tcWeaponsMap = new HashMap<String, Long>();
+		ArrayList<String> tcItems = new ArrayList<String>();
+		HashMap<String, Long> tcItemsMap = new HashMap<String, Long>();
+		ArrayList<String> tcAussies = new ArrayList<String>();
+		HashMap<String, Long> tcAussiesMap = new HashMap<String, Long>();
 		//Botkillers
 		ArrayList<String> rust = new ArrayList<String>();
 		HashMap<String, Long> rustMap = new HashMap<String, Long>();
@@ -317,6 +405,32 @@ public class InventoryFilesParser {
 		HashMap<String, Long> itemsMap = new HashMap<String, Long>();
 		ArrayList<String> aussies = new ArrayList<String>();
 		HashMap<String, Long> aussiesMap = new HashMap<String, Long>();
+		//OS all
+		ArrayList<String> osWeapons = new ArrayList<String>();
+		HashMap<String, Long> osWeaponsMap = new HashMap<String, Long>();
+		ArrayList<String> osItems = new ArrayList<String>();
+		HashMap<String, Long> osItemsMap = new HashMap<String, Long>();
+		//ST all
+		ArrayList<String> stWeapons = new ArrayList<String>();
+		HashMap<String, Long> stWeaponsMap = new HashMap<String, Long>();
+		ArrayList<String> stItems = new ArrayList<String>();
+		HashMap<String, Long> stItemsMap = new HashMap<String, Long>();
+		ArrayList<String> stAussies = new ArrayList<String>();
+		HashMap<String, Long> stAussiesMap = new HashMap<String, Long>();
+		//ME all
+		ArrayList<String> meWeapons = new ArrayList<String>();
+		HashMap<String, Long> meWeaponsMap = new HashMap<String, Long>();
+		ArrayList<String> meItems = new ArrayList<String>();
+		HashMap<String, Long> meItemsMap = new HashMap<String, Long>();
+		ArrayList<String> meAussies = new ArrayList<String>();
+		HashMap<String, Long> meAussiesMap = new HashMap<String, Long>();
+		//GG all
+		ArrayList<String> ggWeapons = new ArrayList<String>();
+		HashMap<String, Long> ggWeaponsMap = new HashMap<String, Long>();
+		ArrayList<String> ggItems = new ArrayList<String>();
+		HashMap<String, Long> ggItemsMap = new HashMap<String, Long>();
+		ArrayList<String> ggAussies = new ArrayList<String>();
+		HashMap<String, Long> ggAussiesMap = new HashMap<String, Long>();
 		int missions = 0; //CBA individual missions, looking at badges already tells you that
 		try {
 			JSONObject obj = (JSONObject) parser.parse(new FileReader(directory + "/" + mvmFileName));
@@ -331,129 +445,216 @@ public class InventoryFilesParser {
 				weaponsArr.add(wepStr);
 			}
 			Set<String> set = obj.keySet();
-			for(String s : set) {
-				if(s.startsWith("Killstreak")) {
-					long amt = (long) obj.get(s);
-					for(int i = 0; i < amt; i++) {
-						normals.add(s);
-					}
-					normalsMap.put(s, amt);
-				} else if(s.startsWith("Specialized")) {
-					long amt = (long) obj.get(s);
-					for(int i = 0; i < amt; i++) {
-						specs.add(s);
-					}
-					specsMap.put(s, amt);
-				} else if(s.startsWith("Professional")) {
-					long amt = (long) obj.get(s);
-					for(int i = 0; i < amt; i++) {
-						pros.add(s);
-					}
-					prosMap.put(s, amt);
-				} else if(s.startsWith("Pristine")) {
-					long amt = (long) obj.get(s);
-					for(int i = 0; i < amt; i++) {
-						pristine.add(s);
-					}
-					pristineMap.put(s, amt);
-				} else if(s.startsWith("Battle-Worn")) {
-					long amt = (long) obj.get(s);
-					for(int i = 0; i < amt; i++) {
-						battleWorn.add(s);
-					}
-					battleWornMap.put(s, amt);
-				} else if(s.startsWith("Reinforced")) {
-					long amt = (long) obj.get(s);
-					for(int i = 0; i < amt; i++) {
-						reinforced.add(s);
-					}
-					reinforcedMap.put(s, amt);
-				} else if(s.startsWith("Strange Australium")) {
-					long amt = (long) obj.get(s);
-					for(int i = 0; i < amt; i++) {
-						aussies.add(s);
-					}
-					aussiesMap.put(s, amt);
-				} else if(s.startsWith("Strange Rust")) {
-					long amt = (long) obj.get(s);
-					for(int i = 0; i < amt; i++) {
-						rust.add(s);
-					}
-					rustMap.put(s, amt);
-				} else if(s.startsWith("Strange Blood")) {
-					long amt = (long) obj.get(s);
-					for(int i = 0; i < amt; i++) {
-						blood.add(s);
-					}
-					bloodMap.put(s, amt);
-				} else if(s.startsWith("Strange Silver")) {
-					boolean mkI = s.endsWith("Mk.I");
-					long amt = (long) obj.get(s);
-					for(int i = 0; i < amt; i++) {
-						if(mkI) {
-							silverI.add(s);
-						} else {
-							silverII.add(s);
-						}
-					}
-					if(mkI) {
-						silverIMap.put(s, amt);
-					} else {
-						silverIIMap.put(s, amt);
-					}
-				} else if(s.startsWith("Strange Gold")) {
-					boolean mkI = s.endsWith("Mk.I");
-					long amt = (long) obj.get(s);
-					for(int i = 0; i < amt; i++) {
-						if(mkI) {
-							goldI.add(s);
-						} else {
-							goldII.add(s);
-						}
-					}
-					if(mkI) {
-						goldIMap.put(s, amt);
-					} else {
-						goldIIMap.put(s, amt);
-					}
-				} else if(s.startsWith("Strange Carbonado")) {
-					long amt = (long) obj.get(s);
-					for(int i = 0; i < amt; i++) {
-						carbonado.add(s);
-					}
-					carbonadoMap.put(s, amt);
-				} else if(s.startsWith("Strange Diamond")) {
-					long amt = (long) obj.get(s);
-					for(int i = 0; i < amt; i++) {
-						diamond.add(s);
-					}
-					diamondMap.put(s, amt);
-				} else if(s.startsWith("Operation")) {
-					long amt = (long) obj.get(s);
-					missions += amt;
-				} else {
-					String name = s;
-					if(name.startsWith("The")) {
-						name = name.substring(3).trim();
-					} else {
-						//log.info(name);
-					}
-					
-					//Doesn't like the special punctuation so special case, idk why cloak doesn't work and CBA
-					if(weaponsArr.contains(name) || name.startsWith("Claidheamh") || name.startsWith("Cloak and Dagger")) {
-						//Is weapon
-						long amt = (long) obj.get(s);
+			for(String tourString : set) {
+				JSONObject tour = (JSONObject) obj.get(tourString);
+				Set<String> tourSet = tour.keySet();
+				for(String s : tourSet) {
+					if(s.startsWith("Killstreak")) {
+						long amt = (long) tour.get(s);
 						for(int i = 0; i < amt; i++) {
-							weapons.add(name);
+							normals.add(s);
 						}
-						weaponsMap.put(name, amt);
-					} else {
-						//Is item
-						long amt = (long) obj.get(s);
+						normalsMap.put(s, amt);
+					} else if(s.startsWith("Specialized")) {
+						long amt = (long) tour.get(s);
 						for(int i = 0; i < amt; i++) {
-							items.add(name);
+							specs.add(s);
 						}
-						itemsMap.put(name, amt);
+						specsMap.put(s, amt);
+					} else if(s.startsWith("Professional")) {
+						long amt = (long) tour.get(s);
+						for(int i = 0; i < amt; i++) {
+							pros.add(s);
+						}
+						prosMap.put(s, amt);
+					} else if(s.startsWith("Pristine")) {
+						long amt = (long) tour.get(s);
+						for(int i = 0; i < amt; i++) {
+							pristine.add(s);
+						}
+						pristineMap.put(s, amt);
+					} else if(s.startsWith("Battle-Worn")) {
+						long amt = (long) tour.get(s);
+						for(int i = 0; i < amt; i++) {
+							battleWorn.add(s);
+						}
+						battleWornMap.put(s, amt);
+					} else if(s.startsWith("Reinforced")) {
+						long amt = (long) tour.get(s);
+						for(int i = 0; i < amt; i++) {
+							reinforced.add(s);
+						}
+						reinforcedMap.put(s, amt);
+					} else if(s.startsWith("Strange Australium")) {
+						long amt = (long) tour.get(s);
+						for(int i = 0; i < amt; i++) {
+							aussies.add(s);
+							if(tourString.equalsIgnoreCase("Steel Trap")) {
+								stAussies.add(s);
+							} else if(tourString.equalsIgnoreCase("Mecha Engine")) {
+								meAussies.add(s);
+							} else if(tourString.equalsIgnoreCase("Two Cities")) {
+								tcAussies.add(s);
+							} else if(tourString.equalsIgnoreCase("Gear Grinder")) {
+								ggAussies.add(s);
+							}
+						}
+						//Add to individual tours map
+						if(tourString.equalsIgnoreCase("Steel Trap")) {
+							stAussiesMap.put(s, amt);
+						} else if(tourString.equalsIgnoreCase("Mecha Engine")) {
+							meAussiesMap.put(s, amt);
+						} else if(tourString.equalsIgnoreCase("Two Cities")) {
+							tcAussiesMap.put(s, amt);
+						} else if(tourString.equalsIgnoreCase("Gear Grinder")) {
+							ggAussiesMap.put(s, amt);
+						}
+						//Overall total need logic to add to existing amts
+						if(aussiesMap.containsKey(s)) { //Already in map, add
+							amt = aussiesMap.get(s) + amt;
+							aussiesMap.put(s, amt);
+						} else { //Not in map, add it
+							aussiesMap.put(s, amt);
+						}
+					} else if(s.startsWith("Strange Rust")) {
+						long amt = (long) tour.get(s);
+						for(int i = 0; i < amt; i++) {
+							rust.add(s);
+						}
+						rustMap.put(s, amt);
+					} else if(s.startsWith("Strange Blood")) {
+						long amt = (long) tour.get(s);
+						for(int i = 0; i < amt; i++) {
+							blood.add(s);
+						}
+						bloodMap.put(s, amt);
+					} else if(s.startsWith("Strange Silver")) {
+						boolean mkI = s.endsWith("Mk.I");
+						long amt = (long) tour.get(s);
+						for(int i = 0; i < amt; i++) {
+							if(mkI) {
+								silverI.add(s);
+							} else {
+								silverII.add(s);
+							}
+						}
+						if(mkI) {
+							silverIMap.put(s, amt);
+						} else {
+							silverIIMap.put(s, amt);
+						}
+					} else if(s.startsWith("Strange Gold")) {
+						boolean mkI = s.endsWith("Mk.I");
+						long amt = (long) tour.get(s);
+						for(int i = 0; i < amt; i++) {
+							if(mkI) {
+								goldI.add(s);
+							} else {
+								goldII.add(s);
+							}
+						}
+						if(mkI) {
+							goldIMap.put(s, amt);
+						} else {
+							goldIIMap.put(s, amt);
+						}
+					} else if(s.startsWith("Strange Carbonado")) {
+						long amt = (long) tour.get(s);
+						for(int i = 0; i < amt; i++) {
+							carbonado.add(s);
+						}
+						carbonadoMap.put(s, amt);
+					} else if(s.startsWith("Strange Diamond")) {
+						long amt = (long) tour.get(s);
+						for(int i = 0; i < amt; i++) {
+							diamond.add(s);
+						}
+						diamondMap.put(s, amt);
+					} else if(s.startsWith("Operation")) {
+						long amt = (long) tour.get(s);
+						missions += amt;
+					} else {
+						String name = s;
+						if(name.startsWith("The")) {
+							name = name.substring(3).trim();
+						} else {
+							//log.info(name);
+						}
+						
+						//Doesn't like the special punctuation so special case, idk why cloak doesn't work and CBA
+						if(weaponsArr.contains(name) || name.startsWith("Claidheamh") || name.startsWith("Cloak and Dagger")) {
+							//Is weapon
+							long amt = (long) tour.get(s);
+							for(int i = 0; i < amt; i++) {
+								weapons.add(s);
+								if(tourString.equalsIgnoreCase("Oil Spill")) {
+									osWeapons.add(s);
+								} else if(tourString.equalsIgnoreCase("Steel Trap")) {
+									stWeapons.add(s);
+								} else if(tourString.equalsIgnoreCase("Mecha Engine")) {
+									meWeapons.add(s);
+								} else if(tourString.equalsIgnoreCase("Two Cities")) {
+									tcWeapons.add(s);
+								} else if(tourString.equalsIgnoreCase("Gear Grinder")) {
+									ggWeapons.add(s);
+								}
+							}
+							//Add to individual tours map
+							if(tourString.equalsIgnoreCase("Oil Spill")) {
+								osWeaponsMap.put(s, amt);
+							} else if(tourString.equalsIgnoreCase("Steel Trap")) {
+								stWeaponsMap.put(s, amt);
+							} else if(tourString.equalsIgnoreCase("Mecha Engine")) {
+								meWeaponsMap.put(s, amt);
+							} else if(tourString.equalsIgnoreCase("Two Cities")) {
+								tcWeaponsMap.put(s, amt);
+							} else if(tourString.equalsIgnoreCase("Gear Grinder")) {
+								ggWeaponsMap.put(s, amt);
+							}
+							//Overall total need logic to add to existing amts
+							if(weaponsMap.containsKey(s)) { //Already in map, add
+								amt = weaponsMap.get(s) + amt;
+								weaponsMap.put(s, amt);
+							} else { //Not in map, add it
+								weaponsMap.put(s, amt);
+							}
+						} else {
+							//Is item
+							long amt = (long) tour.get(s);
+							for(int i = 0; i < amt; i++) {
+								items.add(s);
+								if(tourString.equalsIgnoreCase("Oil Spill")) {
+									osItems.add(s);
+								} else if(tourString.equalsIgnoreCase("Steel Trap")) {
+									stItems.add(s);
+								} else if(tourString.equalsIgnoreCase("Mecha Engine")) {
+									meItems.add(s);
+								} else if(tourString.equalsIgnoreCase("Two Cities")) {
+									tcItems.add(s);
+								} else if(tourString.equalsIgnoreCase("Gear Grinder")) {
+									ggItems.add(s);
+								}
+							}
+							//Add to individual tours map
+							if(tourString.equalsIgnoreCase("Oil Spill")) {
+								osItemsMap.put(s, amt);
+							} else if(tourString.equalsIgnoreCase("Steel Trap")) {
+								stItemsMap.put(s, amt);
+							} else if(tourString.equalsIgnoreCase("Mecha Engine")) {
+								meItemsMap.put(s, amt);
+							} else if(tourString.equalsIgnoreCase("Two Cities")) {
+								tcItemsMap.put(s, amt);
+							} else if(tourString.equalsIgnoreCase("Gear Grinder")) {
+								ggItemsMap.put(s, amt);
+							}
+							//Overall total need logic to add to existing amts
+							if(itemsMap.containsKey(s)) { //Already in map, add
+								amt = itemsMap.get(s) + amt;
+								itemsMap.put(s, amt);
+							} else { //Not in map, add it
+								itemsMap.put(s, amt);
+							}
+						}
 					}
 				}
 			}
@@ -464,24 +665,38 @@ public class InventoryFilesParser {
 						+ "\t\t[3]Weapons: " + weapons.size() + "\n"
 						+ "\t\t[4]Other (hats/paints/etc...): " + items.size() + "\n"
 					+ "\tOil Spill:\n"
-						+ "\t\t[5]Rust botkillers: " + rust.size() + "\n"
-						+ "\t\t[6]Blood botkillers: " + blood.size() + "\n"
+						+ "\t\t[5]Weapons: " + osWeapons.size() + "\n"
+						+ "\t\t[6]Other (hats/paints/etc...): " + osItems.size() + "\n"
+						+ "\t\t[7]Rust botkillers: " + rust.size() + "\n"
+						+ "\t\t[8]Blood botkillers: " + blood.size() + "\n"
 					+ "\tSteel Trap:\n"
-						+ "\t\t[7]Silver Mk.I botkillers: " + silverI.size() + "\n"
-						+ "\t\t[8]Gold Mk.I botkillers: " + goldI.size() + "\n"
+						+ "\t\t[9]Weapons: " + stWeapons.size() + "\n"
+						+ "\t\t[10]Other (hats/paints/etc...): " + stItems.size() + "\n"
+						+ "\t\t[11]Silver Mk.I botkillers: " + silverI.size() + "\n"
+						+ "\t\t[12]Gold Mk.I botkillers: " + goldI.size() + "\n"
+						+ "\t\t[13]Australiums: " + stAussies.size() + "\n"
 					+ "\tMecha Engine:\n"
-						+ "\t\t[9]Silver Mk.II botkillers: " + silverII.size() + "\n"
-						+ "\t\t[10]Gold Mk.II botkillers: " + goldII.size() + "\n"
+						+ "\t\t[14]Weapons: " + meWeapons.size() + "\n"
+						+ "\t\t[15]Other (hats/paints/etc...): " + meItems.size() + "\n"
+						+ "\t\t[16]Silver Mk.II botkillers: " + silverII.size() + "\n"
+						+ "\t\t[17]Gold Mk.II botkillers: " + goldII.size() + "\n"
+						+ "\t\t[18]Australiums: " + meAussies.size() + "\n"
 					+ "\tTwo Cities:\n"
-						+ "\t\t[11]Pristine parts: " + pristine.size() + "\n"
-						+ "\t\t[12]Battle-Worn parts: " + battleWorn.size() + "\n"
-						+ "\t\t[13]Reinforced parts: " + reinforced.size() + "\n"
-						+ "\t\t[14]Killstreak kits: " + normals.size() + "\n"
-						+ "\t\t[15]Specialized killstreak fabricators: " + specs.size() + "\n"
-						+ "\t\t[16]Professional killstreak fabricators: " + pros.size() + "\n"
+						+ "\t\t[19]Weapons: " + tcWeapons.size() + "\n"
+						+ "\t\t[20]Other (hats/paints/etc...): " + tcItems.size() + "\n"
+						+ "\t\t[21]Pristine parts: " + pristine.size() + "\n"
+						+ "\t\t[22]Battle-Worn parts: " + battleWorn.size() + "\n"
+						+ "\t\t[23]Reinforced parts: " + reinforced.size() + "\n"
+						+ "\t\t[24]Killstreak kits: " + normals.size() + "\n"
+						+ "\t\t[25]Specialized killstreak fabricators: " + specs.size() + "\n"
+						+ "\t\t[26]Professional killstreak fabricators: " + pros.size() + "\n"
+						+ "\t\t[27]Australiums: " + tcAussies.size() + "\n"
 					+ "\tGear Grinder:\n"
-						+ "\t\t[17]Carbonado botkillers: " + carbonado.size() + "\n"
-						+ "\t\t[18]Diamond botkillers: " + diamond.size() + "\n"
+						+ "\t\t[28]Weapons: " + ggWeapons.size() + "\n"
+						+ "\t\t[29]Other (hats/paints/etc...): " + ggItems.size() + "\n"
+						+ "\t\t[30]Carbonado botkillers: " + carbonado.size() + "\n"
+						+ "\t\t[31]Diamond botkillers: " + diamond.size() + "\n"
+						+ "\t\t[32]Australiums: " + ggAussies.size() + "\n"
 					+ "\n"
 					+ "Select a number for all items, [1] to view this list again, or [0] to go back.";
 			System.out.println(out);
@@ -497,33 +712,61 @@ public class InventoryFilesParser {
 				} else if(choice == 4) {
 					System.out.println(mapToString(itemsMap));
 				} else if(choice == 5) {
-					System.out.println(mapToString(rustMap));
+					System.out.println(mapToString(osWeaponsMap));
 				} else if(choice == 6) {
-					System.out.println(mapToString(bloodMap));
+					System.out.println(mapToString(osItemsMap));
 				} else if(choice == 7) {
-					System.out.println(mapToString(silverIMap));
+					System.out.println(mapToString(rustMap));
 				} else if(choice == 8) {
-					System.out.println(mapToString(goldIMap));
+					System.out.println(mapToString(bloodMap));
 				} else if(choice == 9) {
-					System.out.println(mapToString(silverIIMap));
+					System.out.println(mapToString(stWeaponsMap));
 				} else if(choice == 10) {
-					System.out.println(mapToString(goldIIMap));
+					System.out.println(mapToString(stItemsMap));
 				} else if(choice == 11) {
-					System.out.println(mapToString(pristineMap));
+					System.out.println(mapToString(silverIMap));
 				} else if(choice == 12) {
-					System.out.println(mapToString(battleWornMap));
+					System.out.println(mapToString(goldIMap));
 				} else if(choice == 13) {
-					System.out.println(mapToString(reinforcedMap));
+					System.out.println(mapToString(stAussiesMap));
 				} else if(choice == 14) {
-					System.out.println(mapToString(normalsMap));
+					System.out.println(mapToString(meWeaponsMap));
 				} else if(choice == 15) {
-					System.out.println(mapToString(specsMap));
+					System.out.println(mapToString(meItemsMap));
 				} else if(choice == 16) {
-					System.out.println(mapToString(prosMap));
+					System.out.println(mapToString(silverIIMap));
 				} else if(choice == 17) {
-					System.out.println(mapToString(carbonadoMap));
+					System.out.println(mapToString(goldIIMap));
 				} else if(choice == 18) {
+					System.out.println(mapToString(meAussiesMap));
+				} else if(choice == 19) {
+					System.out.println(mapToString(tcWeaponsMap));
+				} else if(choice == 20) {
+					System.out.println(mapToString(tcItemsMap));
+				} else if(choice == 21) {
+					System.out.println(mapToString(pristineMap));
+				} else if(choice == 22) {
+					System.out.println(mapToString(battleWornMap));
+				} else if(choice == 23) {
+					System.out.println(mapToString(reinforcedMap));
+				} else if(choice == 24) {
+					System.out.println(mapToString(normalsMap));
+				} else if(choice == 25) {
+					System.out.println(mapToString(specsMap));
+				} else if(choice == 26) {
+					System.out.println(mapToString(prosMap));
+				} else if(choice == 27) {
+					System.out.println(mapToString(tcAussiesMap));
+				} else if(choice == 28) {
+					System.out.println(mapToString(ggWeaponsMap));
+				} else if(choice == 29) {
+					System.out.println(mapToString(ggItemsMap));
+				} else if(choice == 30) {
+					System.out.println(mapToString(carbonadoMap));
+				} else if(choice == 31) {
 					System.out.println(mapToString(diamondMap));
+				} else if(choice == 32) {
+					System.out.println(mapToString(ggAussiesMap));
 				}
 				choice = scan.nextInt();
 			}
