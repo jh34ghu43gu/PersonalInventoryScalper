@@ -459,6 +459,7 @@ public class InventoryFilesParser {
 		ArrayList<String> blacklist = new ArrayList<String>();
 		blacklist.add("Smissmas 2015 Festive Gift");
 		blacklist.add("Mann Co. Store Package");
+		blacklist.add("Secret Saxton");
 		if(blacklist.contains(crateName)) {
 			return resultObject;
 		}
@@ -972,6 +973,7 @@ public class InventoryFilesParser {
 				}
 				choice = scan.nextInt();
 			}
+			scan.close();
 		} catch (IOException | ParseException e) {
 			// TODO Auto-generated catch block
 			log.error("Error parsing mvm file.");
@@ -1019,11 +1021,9 @@ public class InventoryFilesParser {
 		freeCrateList.add("'Decorated War Hero' War Paint Civilian Grade Keyless Case");
 		freeCrateList.add("'Contract Campaigner' War Paint Mercenary Grade Keyless Case");
 		freeCrateList.add("'Contract Campaigner' War Paint Freelance Grade Keyless Case");
-		freeCrateList.add("Secret Saxton"); //FIX
+		//freeCrateList.add("Secret Saxton"); //FIXed
 		freeCrateList.add("Gift-Stuffed Stocking");
 		freeCrateList.add("Halloween Package");
-		freeCrateList.add("");
-		freeCrateList.add("");
 		
 		int unlockedI = 2; //0 is quit, 1 is redisplay
 		int unlockedTotal = 0;
@@ -1192,6 +1192,7 @@ public class InventoryFilesParser {
 					}
 					choice = scan.nextInt();
 				}
+				scan.close();
 			} catch (FileNotFoundException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
