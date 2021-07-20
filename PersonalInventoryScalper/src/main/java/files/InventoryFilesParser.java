@@ -262,48 +262,33 @@ public class InventoryFilesParser {
 		File[] invFiles = invDir.listFiles();
 		JSONParser parser = new JSONParser();
 		JSONObject unboxObject = new JSONObject();
-		HashMap<String, Integer> itemsGained = new HashMap<String, Integer>();
-		HashMap<String, Integer> itemsGainedColor = new HashMap<String, Integer>();
-		HashMap<String, Integer> itemsLost = new HashMap<String, Integer>();
+		
+		JSONObject giftTemp = new JSONObject();
 		for(File f : invFiles) {
 			try {
 				JSONObject obj = (JSONObject) parser.parse(new FileReader(f));
 				Set<String> set = obj.keySet();
-				for(String s : set) {
-					JSONObject trade = (JSONObject) obj.get(s);
-					if(trade.get("event_description").equals("Unlocked a crate")) {
-						JSONObject plusObj = (JSONObject) trade.get("plus");
-						Set<String> tradeSet = plusObj.keySet();
-						for(String s2 : tradeSet) {
-							JSONObject item = (JSONObject) plusObj.get(s2);
-							String itemName = (String) item.get("itemName");
-							if(itemsGained.containsKey(itemName)) { //Already in map, iterate
-								int amt = itemsGained.get(itemName)+1;
-								itemsGained.put(itemName, amt);
-							} else { //Not in map, add it
-								itemsGained.put(itemName, 1);
-							}
-							String color = (String) item.get("color");
-							if(itemsGainedColor.containsKey(color)) { //Already in map, iterate
-								int amt = itemsGainedColor.get(color)+1;
-								itemsGainedColor.put(color, amt);
-							} else { //Not in map, add it
-								itemsGainedColor.put(color, 1);
-							}
-						}
-						JSONObject minusObj = (JSONObject) trade.get("minus");
-						tradeSet = minusObj.keySet();
-						for(String s2 : tradeSet) {
-							JSONObject item = (JSONObject) minusObj.get(s2);
-							String itemName = (String) item.get("itemName");
-							if(itemsLost.containsKey(itemName)) { //Already in map, iterate
-								int amt = itemsLost.get(itemName)+1;
-								itemsLost.put(itemName, amt);
-							} else { //Not in map, add it
-								itemsLost.put(itemName, 1);
-							}
+				String tradeStr;
+				for(int i = set.size()-1; i >= 0; i--) { //read in reverse order to go chronologically
+					tradeStr = ("trade" + String.valueOf(i));
+					JSONObject trade = (JSONObject) obj.get(tradeStr);
+					//Unlocked class crates are special
+					if(trade.get("event_description").equals("Received a gift")) {
+						//log.info("giftTemp made for " + ((JSONObject)trade.get("plus")).get("item0").toString());
+						giftTemp = trade;
+						continue;
+					}
+					if(trade.get("event_description").equals("Used")) {
+						if(!giftTemp.isEmpty()) { //Unlocked crate 99%
+							unboxObject = this.parseUnboxObj(giftTemp, unboxObject, trade, true);
 						}
 					}
+					//Normal crates
+					if(trade.get("event_description").equals("Unlocked a crate")) {
+						unboxObject = this.parseUnboxObj(trade, unboxObject, trade, false);
+					}
+					//Clear gift obj if we didn't just set it
+					giftTemp = new JSONObject();
 				}
 			} catch (FileNotFoundException e) {
 				// TODO Auto-generated catch block
@@ -319,21 +304,6 @@ public class InventoryFilesParser {
 				return false;
 			}
 		}
-		JSONObject plus = new JSONObject();
-		JSONObject plusColor = new JSONObject();
-		JSONObject minus = new JSONObject();
-		for(Map.Entry<String, Integer> entry : itemsGained.entrySet()) {
-			plus.put(entry.getKey(), entry.getValue());
-		}
-		for(Map.Entry<String, Integer> entry : itemsGainedColor.entrySet()) {
-			plusColor.put(entry.getKey(), entry.getValue());
-		}
-		for(Map.Entry<String, Integer> entry : itemsLost.entrySet()) {
-			minus.put(entry.getKey(), entry.getValue());
-		}
-		unboxObject.put("Gained", plus);
-		unboxObject.put("GainedColors", plusColor);
-		unboxObject.put("Lost", minus);
 		try {
 			Gson gson = new GsonBuilder().setPrettyPrinting().create();
 			String s = gson.toJson(unboxObject);
@@ -348,6 +318,163 @@ public class InventoryFilesParser {
 			return false;
 		}
 		return true;
+	}
+	
+	private JSONObject parseUnboxObj(JSONObject unboxEvent, JSONObject resultObject, JSONObject optionalUsedEvent, Boolean usedEvent) {
+		JSONObject plus = (JSONObject) unboxEvent.get("plus");
+		HashMap<String, Integer> plusMap = new HashMap<String, Integer>();
+		HashMap<String, Integer> minusMap = new HashMap<String, Integer>();
+		HashMap<String, Integer> colorMap = new HashMap<String, Integer>();
+		JSONObject crateObj = new JSONObject(); //Contains total, minusItems, plusItems, colors
+		JSONObject minusItems = new JSONObject();
+		JSONObject plusItems = new JSONObject();
+		JSONObject colors = new JSONObject();
+		String crateName = "Unknown";
+		//Unlocked crate
+		if(usedEvent) {
+			JSONObject usedObj = (JSONObject) optionalUsedEvent.get("minus");
+			crateName = (String) ((JSONObject)usedObj.get("item0")).get("itemName");
+			if(resultObject.containsKey(crateName)) {
+				plusItems = (JSONObject) ((JSONObject) resultObject.get(crateName)).get("plus");
+				minusItems = (JSONObject) ((JSONObject) resultObject.get(crateName)).get("minus");
+				if(plusItems.containsKey("colors")) {
+					colors = (JSONObject) plusItems.get("colors");
+				}
+			}
+			Set<String> items = plus.keySet();
+			for(String s : items) {
+				JSONObject itemObj = (JSONObject) plus.get(s);
+				String itemName = (String) itemObj.get("itemName");
+				String color = (String) itemObj.get("color");
+				if(plusMap.containsKey(itemName)) {
+					int amt = plusMap.get(itemName) + 1;
+					plusMap.put(itemName, amt);
+				} else {
+					plusMap.put(itemName, 1);
+				}
+				if(colorMap.containsKey(color)) {
+					int amt = colorMap.get(color) + 1;
+					colorMap.put(color, amt);
+				} else {
+					colorMap.put(color, 1);
+				}
+			}
+			for(Map.Entry<String, Integer> entry : plusMap.entrySet()) {
+				int amt = entry.getValue();
+				if(plusItems.containsKey(entry.getKey())) {
+					amt += (int) plusItems.get(entry.getKey());
+				}
+				if(plusItems.containsKey(entry.getKey())) {
+					plusItems.replace(entry.getKey(), amt);
+				} else {
+					plusItems.put(entry.getKey(), amt);
+				}
+			}
+			for(Map.Entry<String, Integer> entry : colorMap.entrySet()) {
+				int amt = entry.getValue();
+				if(colors.containsKey(entry.getKey())) {
+					amt += (int) colors.get(entry.getKey());
+				}
+				if(colors.containsKey(entry.getKey())) {
+					colors.replace(entry.getKey(), amt);
+				} else {
+					colors.put(entry.getKey(), amt);
+				}
+			}
+		} else { //Normal crate
+			JSONObject minus = (JSONObject) unboxEvent.get("minus");
+			//Minus object loop
+			Set<String> items = minus.keySet();
+			for(String s : items) {
+				JSONObject itemObj = (JSONObject) minus.get(s);
+				String itemName = (String) itemObj.get("itemName");
+				if(itemName.contains("Key") && !itemName.contains("Keyless")) {
+					minusMap.put(itemName, 1);
+				} else {
+					crateName = itemName;
+					//total tracks this don't need to add to map
+				}
+			}
+			if(resultObject.containsKey(crateName)) {
+				plusItems = (JSONObject) ((JSONObject) resultObject.get(crateName)).get("plus");
+				minusItems = (JSONObject) ((JSONObject) resultObject.get(crateName)).get("minus");
+				if(plusItems.containsKey("colors")) {
+					colors = (JSONObject) plusItems.get("colors");
+				}
+			}
+			//Plus object loop
+			items = plus.keySet();
+			for(String s : items) {
+				JSONObject itemObj = (JSONObject) plus.get(s);
+				String itemName = (String) itemObj.get("itemName");
+				String color = (String) itemObj.get("color");
+				if(plusMap.containsKey(itemName)) {
+					int amt = plusMap.get(itemName) + 1;
+					plusMap.put(itemName, amt);
+				} else {
+					plusMap.put(itemName, 1);
+				}
+				if(colorMap.containsKey(color)) {
+					int amt = colorMap.get(color) + 1;
+					colorMap.put(color, amt);
+				} else {
+					colorMap.put(color, 1);
+				}
+			}
+			//Map -> obj loops
+			for(Map.Entry<String, Integer> entry : plusMap.entrySet()) {
+				int amt = entry.getValue();
+				if(plusItems.containsKey(entry.getKey())) {
+					amt += (int) plusItems.get(entry.getKey());
+				}
+				if(plusItems.containsKey(entry.getKey())) {
+					plusItems.replace(entry.getKey(), amt);
+				} else {
+					plusItems.put(entry.getKey(), amt);
+				}
+			}
+			for(Map.Entry<String, Integer> entry : colorMap.entrySet()) {
+				int amt = entry.getValue();
+				if(colors.containsKey(entry.getKey())) {
+					amt += (int) colors.get(entry.getKey());
+				}
+				if(colors.containsKey(entry.getKey())) {
+					colors.replace(entry.getKey(), amt);
+				} else {
+					colors.put(entry.getKey(), amt);
+				}
+			}
+			for(Map.Entry<String, Integer> entry : minusMap.entrySet()) { //Overkill for 1 item but maybe there's a chance 2 items got used
+				int amt = entry.getValue();
+				if(minusItems.containsKey(entry.getKey())) {
+					amt += (int) minusItems.get(entry.getKey());
+				}
+				if(minusItems.containsKey(entry.getKey())) {
+					minusItems.replace(entry.getKey(), amt);
+				} else {
+					minusItems.put(entry.getKey(), amt);
+				}
+			}
+		}
+		ArrayList<String> blacklist = new ArrayList<String>();
+		blacklist.add("Smissmas 2015 Festive Gift");
+		blacklist.add("Mann Co. Store Package");
+		if(blacklist.contains(crateName)) {
+			return resultObject;
+		}
+		plusItems.put("colors", colors);
+		crateObj.put("plus", plusItems);
+		crateObj.put("minus", minusItems);
+		if(resultObject.containsKey(crateName)) { //Has the crate, add to it
+			int amt = (int) ((JSONObject) resultObject.get(crateName)).get("total") + 1;
+			crateObj.put("total", amt);
+			resultObject.replace(crateName, crateObj);
+		} else { //Doesn't already have this crate
+			crateObj.put("total", 1);
+			resultObject.put(crateName, crateObj);
+		}
+		
+		return resultObject;
 	}
 	
 	public void outputMvmFile() {
@@ -857,229 +984,225 @@ public class InventoryFilesParser {
 			log.warn("Could not read unbox file, it does not exist!");
 			return;
 		}
-		JSONParser parser = new JSONParser();		
-		try {
-			JSONObject obj = (JSONObject) parser.parse(new FileReader(directory + "/" + unboxFileName));
-			JSONObject plus = (JSONObject) obj.get("Gained");
-			JSONObject plusColor = (JSONObject) obj.get("GainedColors");
-			JSONObject minus = (JSONObject) obj.get("Lost");
+		JSONParser parser = new JSONParser();
+		//Colors aka qualities
+		String uniqueColor = "#7D6D00";
+		String strangeColor = "#CF6A32";
+		String unusualColor = "#8650AC";
+		String wepColor = "#FAFAFA";
+		String hauntedColor = "#38f3ab";
+		int totalUnique = 0;
+		int totalStrange = 0;
+		int totalUnusual = 0;
+		int totalWep = 0;
+		int totalHaunted = 0;
+		
+		int totalCrates = 0;
+		
+		HashMap<Integer, HashMap<Integer, String>> crateMap = new HashMap<Integer, HashMap<Integer, String>>();
+		
+		
+		int freeI = 2; //0 is quit, 1 is redisplay
+		int freeTotal = 0;
+		HashMap<Integer, String> freeCrateMap = new HashMap<Integer, String>();
+		crateMap.put(2, freeCrateMap);
+		ArrayList<String> freeCrateList = new ArrayList<String>();
+		freeCrateList.add("Gift-Stuffed Stocking 2018");
+		freeCrateList.add("Gift-Stuffed Stocking 2017");
+		freeCrateList.add("'Contract Campaigner' War Paint Civilian Grade Keyless Case");
+		freeCrateList.add("Antique Halloween Goodie Cauldron");
+		freeCrateList.add("Gift-Stuffed Stocking 2019");
+		freeCrateList.add("Gift-Stuffed Stocking 2020");
+		freeCrateList.add("Halloween Gift Cauldron");
+		freeCrateList.add("'Decorated War Hero' War Paint Mercenary Grade Keyless Case");
+		freeCrateList.add("'Decorated War Hero' War Paint Freelance Grade Keyless Case");
+		freeCrateList.add("'Decorated War Hero' War Paint Civilian Grade Keyless Case");
+		freeCrateList.add("'Contract Campaigner' War Paint Mercenary Grade Keyless Case");
+		freeCrateList.add("'Contract Campaigner' War Paint Freelance Grade Keyless Case");
+		freeCrateList.add("Secret Saxton"); //FIX
+		freeCrateList.add("Gift-Stuffed Stocking");
+		freeCrateList.add("Halloween Package");
+		freeCrateList.add("");
+		freeCrateList.add("");
+		
+		int unlockedI = 2; //0 is quit, 1 is redisplay
+		int unlockedTotal = 0;
+		HashMap<Integer, String> unlockedCrateMap = new HashMap<Integer, String>();
+		crateMap.put(3, unlockedCrateMap);
+		ArrayList<String> unlockedCrateList = new ArrayList<String>();
+		
+		int cosmeticI = 2; //0 is quit, 1 is redisplay
+		int cosmeticTotal = 0;
+		HashMap<Integer, String> cosmeticCaseMap = new HashMap<Integer, String>();
+		crateMap.put(4, cosmeticCaseMap);
+		ArrayList<String> cosmeticCaseList = new ArrayList<String>();
+		cosmeticCaseList.add("Violet Vermin Case");
+		cosmeticCaseList.add("Wicked Windfall Case");
+		cosmeticCaseList.add("Creepy Crawly Case");
+		cosmeticCaseList.add("Gargoyle Case");
+		cosmeticCaseList.add("Spooky Spoils Case");
+		
+		int skinI = 2; //0 is quit, 1 is redisplay
+		int skinTotal = 0;
+		HashMap<Integer, String> skinCaseMap = new HashMap<Integer, String>();
+		crateMap.put(5, skinCaseMap);
+		ArrayList<String> skinCaseList = new ArrayList<String>();
+		
+		int paintI = 2; //0 is quit, 1 is redisplay
+		int paintTotal = 0;
+		HashMap<Integer, String> warPaintCaseMap = new HashMap<Integer, String>();
+		crateMap.put(6, warPaintCaseMap);
+		ArrayList<String> warPaintCaseList = new ArrayList<String>();
+		
+		int otherI = 2; //0 is quit, 1 is redisplay
+		int otherTotal = 0;
+		HashMap<Integer, String> otherCrateMap = new HashMap<Integer, String>();
+		crateMap.put(7, otherCrateMap);
+		
+		String outString = "Unbox Loot Results: \n";
+		String outStringEnd = "Select a number for all items, [1] to view this list again, or [0] to go back.";
 			
-			
-			//Get keys/cases used
-			ArrayList<String> freeKeyless = new ArrayList<String>();
-			HashMap<String, Long> freeKeylessMap = new HashMap<String, Long>();
-			ArrayList<String> keyless = new ArrayList<String>();
-			HashMap<String, Long> keylessMap = new HashMap<String, Long>();
-			
-			ArrayList<String> crateKey = new ArrayList<String>();
-			HashMap<String, Long> crateKeyMap = new HashMap<String, Long>();
-			ArrayList<String> cosmeticKey = new ArrayList<String>();
-			HashMap<String, Long> cosmeticKeyMap = new HashMap<String, Long>();
-			ArrayList<String> paintKey = new ArrayList<String>();
-			HashMap<String, Long> paintKeyMap = new HashMap<String, Long>();
-			ArrayList<String> skinKey = new ArrayList<String>();
-			HashMap<String, Long> skinKeyMap = new HashMap<String, Long>();
-			
-			ArrayList<String> crate = new ArrayList<String>();
-			HashMap<String, Long> crateMap = new HashMap<String, Long>();
-			ArrayList<String> cosmeticCase = new ArrayList<String>();
-			HashMap<String, Long> cosmeticCaseMap = new HashMap<String, Long>();
-			ArrayList<String> paintCase = new ArrayList<String>();
-			HashMap<String, Long> paintCaseMap = new HashMap<String, Long>();
-			ArrayList<String> skinCase = new ArrayList<String>();
-			HashMap<String, Long> skinCaseMap = new HashMap<String, Long>();
-			
-			ArrayList<String> specialCosmeticNames = new ArrayList<String>();
-			specialCosmeticNames.add("Wicked Windfall");
-			specialCosmeticNames.add("Gargoyle");
-			specialCosmeticNames.add("Spooky Spoils");
-			specialCosmeticNames.add("Creepy Crawly");
-			specialCosmeticNames.add("Violet Vermin");
-			specialCosmeticNames.add("Quarantined");
-			specialCosmeticNames.add("Confidential");
-			specialCosmeticNames.add("Invasion Community");
-			ArrayList<String> specialSkinNames = new ArrayList<String>();
-			specialSkinNames.add("Gun Mettle");
-			specialSkinNames.add("Tough Break");
-			
-			Set<String> set = minus.keySet();
-			int unboxes = 0;
-			for(String s : set) {
+			try {
+				JSONObject obj = (JSONObject) parser.parse(new FileReader(directory + "/" + unboxFileName));
+				Set<String> set = obj.keySet();
 				
-				if(s.contains("Grade Keyless Case")) {
-					long amt = (long) minus.get(s);
-					for(int i = 0; i < amt; i++) {
-						freeKeyless.add(s);
-						unboxes++;
+				for(String s : set) {
+					JSONObject crateObj = (JSONObject) obj.get(s);
+					JSONObject cratePlus = (JSONObject) crateObj.get("plus");
+					JSONObject colors = (JSONObject) cratePlus.get("colors");
+					if(colors.containsKey(uniqueColor)) {
+						totalUnique += (long) colors.get(uniqueColor);
 					}
-					freeKeylessMap.put(s, amt);
-				} else if(s.contains("Unlocked")) {
-					long amt = (long) minus.get(s);
-					for(int i = 0; i < amt; i++) {
-						keyless.add(s);
-						unboxes++;
+					if(colors.containsKey(strangeColor)) {
+						totalStrange += (long) colors.get(strangeColor);
 					}
-					keylessMap.put(s, amt);
-				} else if(s.contains("Cosmetic Key")) {
-					long amt = (long) minus.get(s);
-					for(int i = 0; i < amt; i++) {
-						cosmeticKey.add(s);
-						unboxes++;
+					if(colors.containsKey(unusualColor)) {
+						totalUnusual += (long) colors.get(unusualColor);
 					}
-					cosmeticKeyMap.put(s, amt);
-				} else if(s.contains("War Paint Key")) {
-					long amt = (long) minus.get(s);
-					for(int i = 0; i < amt; i++) {
-						paintKey.add(s);
-						unboxes++;
+					if(colors.containsKey(wepColor)) {
+						totalWep += (long) colors.get(wepColor);
 					}
-					paintKeyMap.put(s, amt);
-				} else if(s.contains("Key")) { //Must be last key
-					long amt = (long) minus.get(s);
-					//Special cases bc valve bad
-					boolean key = false;
-					if(!key) {
-						for(String s2 : specialCosmeticNames) {
-							if(s.contains(s2)) {
-								for(int i = 0; i < amt; i++) {
-									cosmeticKey.add(s);
-									unboxes++;
-								}
-								cosmeticKeyMap.put(s, amt);
-								key = true;
-								break;
-							}
-						}
+					if(colors.containsKey(hauntedColor)) {
+						totalHaunted += (long) colors.get(hauntedColor);
 					}
-					if(!key) {
-						for(String s2 : specialSkinNames) {
-							if(s.contains(s2)) {
-								for(int i = 0; i < amt; i++) {
-									skinKey.add(s);
-									unboxes++;
-								}
-								skinKeyMap.put(s, amt);
-								key = true;
-								break;
-							}
-						}
+					if(freeCrateList.contains(s)) {
+						freeCrateMap.put(freeI, s);
+						freeI++;
+						long amt = (long) crateObj.get("total");
+						freeTotal += amt;
+					} else if(unlockedCrateList.contains(s) || s.contains("Unlocked")) {
+						unlockedCrateMap.put(unlockedI, s);
+						unlockedI++;
+						long amt = (long) crateObj.get("total");
+						unlockedTotal += amt;
+					} else if(cosmeticCaseList.contains(s) || s.contains("Cosmetic Case")) {
+						cosmeticCaseMap.put(cosmeticI, s);
+						cosmeticI++;
+						long amt = (long) crateObj.get("total");
+						cosmeticTotal += amt;
+					} else if(skinCaseList.contains(s) || s.contains("Collection") || s.contains("Weapons Case")) {
+						skinCaseMap.put(skinI, s);
+						skinI++;
+						long amt = (long) crateObj.get("total");
+						skinTotal += amt;
+					} else if(warPaintCaseList.contains(s) || s.contains("War Paint")) {
+						warPaintCaseMap.put(paintI, s);
+						paintI++;
+						long amt = (long) crateObj.get("total");
+						paintTotal += amt;
+					} else {
+						otherCrateMap.put(otherI, s);
+						otherI++;
+						long amt = (long) crateObj.get("total");
+						otherTotal += amt;
 					}
-					if(!key) {
-						for(int i = 0; i < amt; i++) {
-							crateKey.add(s);
-							unboxes++;
-						}
-						crateKeyMap.put(s, amt);
-					}
-				} else if(s.contains("Cosmetic Case")) {
-					long amt = (long) minus.get(s);
-					for(int i = 0; i < amt; i++) {
-						cosmeticCase.add(s);
-					}
-					cosmeticCaseMap.put(s, amt);
-				} else if(s.contains("War Paint Case")) {
-					long amt = (long) minus.get(s);
-					for(int i = 0; i < amt; i++) {
-						paintCase.add(s);
-					}
-					paintCaseMap.put(s, amt);
-				} else if(s.contains("Weapons Case")) {
-					long amt = (long) minus.get(s);
-					for(int i = 0; i < amt; i++) {
-						skinCase.add(s);
-					}
-					skinCaseMap.put(s, amt);
-				} else { //Must be last for generic crates
-					long amt = (long) minus.get(s);
-					boolean c = false;
-					if(!c) {
-						for(String s2 : specialCosmeticNames) {
-							if(s.contains(s2)) {
-								for(int i = 0; i < amt; i++) {
-									cosmeticCase.add(s);
-								}
-								cosmeticCaseMap.put(s, amt);
-								c = true;
-							}
-						}
-					}
-					if(!c) {
-						for(String s2 : specialSkinNames) {
-							if(s.contains(s2)) {
-								for(int i = 0; i < amt; i++) {
-									skinCase.add(s);
-								}
-								skinCaseMap.put(s, amt);
-								c = true;
-							}
-						}
-					}
-					if(!c) {
-						for(int i = 0; i < amt; i++) {
-							crate.add(s);
-						}
-						crateMap.put(s, amt);
-					}
-				}				
-			}
-			//Colors aka qualities
-			String unique = "#7D6D00";
-			String strange = "#CF6A32";
-			String unusual = "#8650AC";
-			String wep = "#FAFAFA";
-			long uniques = (long) plusColor.get(unique);
-			long stranges = (long) plusColor.get(strange);
-			long unusuals = (long) plusColor.get(unusual);
-			long weps = (long) plusColor.get(wep);
-			
-			
-			
-			String out = "Unboxes Results: \n"
-					+ "\tTotal Unboxes: " + unboxes + "\n"
-					+ "\tItems Used:\n"
-						+ "\t\t[2]Free Keyless Cases: " + freeKeyless.size() + "\n"
-						+ "\t\t[3]Unlocked Cases/Crates: " + keyless.size() + "\n"
-						+ "\t\t[4]Cosmetic Cases: " + cosmeticCase.size() + "\n"
-						+ "\t\t[5]War Paint Cases: " + paintCase.size() + "\n"
-						+ "\t\t[6]Weapon Skin Cases: " + skinCase.size() + "\n"
-						+ "\t\t[7]Other (crates): " + crate.size() + "\n"
-					+ "\tItems Gained:\n"
-						+ "\t\tUniques: " + uniques + "\n"
-						+ "\t\tStranges: " + stranges + "\n"
-						+ "\t\tUnusuals: " + unusuals + "\n"
-						+ "\t\tOther (war paints/skins): " + weps + "\n"
-					+ "Select a number for all items, [1] to view this list again, or [0] to go back.";
-			
-			System.out.println(out);
-			Scanner scan = new Scanner(System.in);
-			int choice = scan.nextInt();
-			while(choice != 0) {
-				if(choice == 1) {
-					System.out.println(out);
-				} else if(choice == 2) {
-					System.out.println(mapToString(freeKeylessMap));
-				} else if(choice == 3) {
-					System.out.println(mapToString(keylessMap));
-				} else if(choice == 4) {
-					System.out.println(mapToString(cosmeticCaseMap));
-					System.out.println(mapToString(cosmeticKeyMap));
-				} else if(choice == 5) {
-					System.out.println(mapToString(paintCaseMap));
-					System.out.println(mapToString(paintKeyMap));
-				} else if(choice == 6) {
-					System.out.println(mapToString(skinCaseMap));
-					System.out.println(mapToString(skinKeyMap));
-				} else if(choice == 7) {
-					System.out.println(mapToString(crateMap));
-					System.out.println(mapToString(crateKeyMap));
 				}
-				choice = scan.nextInt();
+				totalCrates = freeTotal+unlockedTotal+cosmeticTotal+skinTotal+paintTotal+otherTotal;
+				outString += "\t[2] Free Crates : " + freeTotal + "\n";
+				outString += "\t[3] Unlocked Crates : " + unlockedTotal + "\n";
+				outString += "\t[4] Cosmetic Cases : " + cosmeticTotal + "\n";
+				outString += "\t[5] Weapon Skin Cases : " + skinTotal + "\n";
+				outString += "\t[6] War Paint Cases : " + paintTotal + "\n";
+				outString += "\t[7] Crates : " + otherTotal + "\n";
+				outString += "\n\tTotal Uniques : " + totalUnique + "\n"
+						+ "\tTotal Stranges : " + totalStrange + "\n"
+						+ "\tTotal Decorated (Weapons) : " + totalWep + "\n"
+						+ "\tTotal Haunted : " + totalHaunted + "\n"
+						+ "\tTotal Unusuals : " + totalUnusual + "\n";
+				outString += "\n\tTotal Unboxes : " + totalCrates + " (" + (totalCrates-freeTotal) + " ignoring free crates)\n";
+				System.out.println(outString + outStringEnd);
+				//Details
+				Scanner scan = new Scanner(System.in);
+				int choice = scan.nextInt();
+				while(choice != 0) {
+					String detailedOut = "";
+					if(choice == 1) { //Reprint overview
+						System.out.println(outString + outStringEnd);
+					} else if(crateMap.containsKey(choice)) { //Specific category
+						String categoryOut = "";
+						HashMap<Integer, String> category = crateMap.get(choice);
+						for(Entry<Integer, String> e : category.entrySet()) {
+							JSONObject crate = (JSONObject) obj.get(e.getValue());
+							categoryOut += "[" + e.getKey() + "]" + " " + e.getValue() + " : " + crate.get("total") + "\n";
+						}
+						System.out.println(categoryOut + outStringEnd);
+						int choice2 = scan.nextInt();
+						while(choice2 != 0) {
+							if(choice2 == 1) {
+								System.out.println(categoryOut + outStringEnd);
+							} else {
+								String crateName = category.get(choice2);
+								detailedOut = crateName + " details: \n";
+								JSONObject crate = (JSONObject)obj.get(crateName);
+								JSONObject cratePlus = (JSONObject)crate.get("plus");
+								Set<String> plusSet = cratePlus.keySet();
+								//Individual item list first
+								detailedOut += "\tItems Gained: \n";
+								for(String s : plusSet) {
+									if(s.equals("colors")) {
+										continue;
+									}
+									detailedOut += "\t\t" + s + " : " + cratePlus.get(s) + "\n";
+								}
+								//Quality of items if they exist
+								detailedOut += "\n\tQuality Totals: \n";
+								JSONObject colors = (JSONObject) cratePlus.get("colors");
+								if(colors.containsKey(uniqueColor)) {
+									detailedOut += "\t\tUniques : " + colors.get(uniqueColor) + "\n";
+								}
+								if(colors.containsKey(strangeColor)) {
+									detailedOut += "\t\tStranges : " + colors.get(strangeColor) + "\n";
+								}
+								if(colors.containsKey(unusualColor)) {
+									detailedOut += "\t\tUnusuals : " + colors.get(unusualColor) + "\n";
+								}
+								if(colors.containsKey(wepColor)) {
+									detailedOut += "\t\tDecorated : " + colors.get(wepColor) + "\n";
+								}
+								if(colors.containsKey(hauntedColor)) {
+									detailedOut += "\t\tHaunted : " + colors.get(hauntedColor) + "\n";
+								}
+								//Total and print
+								detailedOut += "\n\tTotal: " + crate.get("total");
+								System.out.println(detailedOut);
+							}
+							choice2 = scan.nextInt();
+						}
+						System.out.println(outString + outStringEnd);
+					}
+					choice = scan.nextInt();
+				}
+			} catch (FileNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (ParseException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
-		} catch (IOException | ParseException e) {
-			// TODO Auto-generated catch block
-			log.error("Error parsing mvm file.");
-			e.printStackTrace();
-		}
+		
 	}
 	
 	private static String mapToString(Map<String, Long> map) {
