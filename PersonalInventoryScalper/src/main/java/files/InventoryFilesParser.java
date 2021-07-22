@@ -325,10 +325,12 @@ public class InventoryFilesParser {
 		HashMap<String, Integer> plusMap = new HashMap<String, Integer>();
 		HashMap<String, Integer> minusMap = new HashMap<String, Integer>();
 		HashMap<String, Integer> colorMap = new HashMap<String, Integer>();
+		HashMap<String, Integer> rarityMap = new HashMap<String, Integer>();
 		JSONObject crateObj = new JSONObject(); //Contains total, minusItems, plusItems, colors
 		JSONObject minusItems = new JSONObject();
 		JSONObject plusItems = new JSONObject();
 		JSONObject colors = new JSONObject();
+		JSONObject rarity = new JSONObject();
 		String crateName = "Unknown";
 		//Unlocked crate
 		if(usedEvent) {
@@ -339,6 +341,9 @@ public class InventoryFilesParser {
 				minusItems = (JSONObject) ((JSONObject) resultObject.get(crateName)).get("minus");
 				if(plusItems.containsKey("colors")) {
 					colors = (JSONObject) plusItems.get("colors");
+				}
+				if(plusItems.containsKey("rarities")) {
+					rarity = (JSONObject) plusItems.get("rarities");
 				}
 			}
 			Set<String> items = plus.keySet();
@@ -363,8 +368,6 @@ public class InventoryFilesParser {
 				int amt = entry.getValue();
 				if(plusItems.containsKey(entry.getKey())) {
 					amt += (int) plusItems.get(entry.getKey());
-				}
-				if(plusItems.containsKey(entry.getKey())) {
 					plusItems.replace(entry.getKey(), amt);
 				} else {
 					plusItems.put(entry.getKey(), amt);
@@ -374,8 +377,6 @@ public class InventoryFilesParser {
 				int amt = entry.getValue();
 				if(colors.containsKey(entry.getKey())) {
 					amt += (int) colors.get(entry.getKey());
-				}
-				if(colors.containsKey(entry.getKey())) {
 					colors.replace(entry.getKey(), amt);
 				} else {
 					colors.put(entry.getKey(), amt);
@@ -401,12 +402,27 @@ public class InventoryFilesParser {
 				if(plusItems.containsKey("colors")) {
 					colors = (JSONObject) plusItems.get("colors");
 				}
+				if(plusItems.containsKey("rarities")) {
+					rarity = (JSONObject) plusItems.get("rarities");
+				}
 			}
 			//Plus object loop
+			HashMap<String, String> rarities = InventoryFilesParser.getCaseRarities(crateName);
 			items = plus.keySet();
 			for(String s : items) {
 				JSONObject itemObj = (JSONObject) plus.get(s);
 				String itemName = (String) itemObj.get("itemName");
+				String noQualityItemName = itemName;
+				if(noQualityItemName.startsWith("Strange ")) {
+					noQualityItemName = noQualityItemName.substring(8);
+				}
+				if(noQualityItemName.startsWith("Unusual ")) {
+					noQualityItemName = noQualityItemName.substring(8);
+				}
+				if(noQualityItemName.startsWith("The ")) {
+					noQualityItemName = noQualityItemName.substring(4);
+				}
+				
 				String color = (String) itemObj.get("color");
 				if(plusMap.containsKey(itemName)) {
 					int amt = plusMap.get(itemName) + 1;
@@ -420,14 +436,66 @@ public class InventoryFilesParser {
 				} else {
 					colorMap.put(color, 1);
 				}
+				if(!rarities.isEmpty() && rarities.containsKey(noQualityItemName)) {
+					String rarityVal = rarities.get(noQualityItemName);
+					if(rarityMap.containsKey(rarityVal)) {
+						int amt = rarityMap.get(rarityVal) + 1;
+						rarityMap.put(rarityVal, amt);
+					} else {
+						rarityMap.put(rarityVal, 1);
+					}
+					
+				} else if(!rarities.isEmpty()) {
+					
+					boolean doWarn = true;
+					//Manual ones that java can't figure out
+					if(noQualityItemName.endsWith("Polished War Paint")) {
+						String rarityVal = "commando";
+						if(rarityMap.containsKey(rarityVal)) {
+							int amt = rarityMap.get(rarityVal) + 1;
+							rarityMap.put(rarityVal, amt);
+						} else {
+							rarityMap.put(rarityVal, 1);
+						}
+						doWarn = false;
+					}
+					
+					//Do a warning for future problems
+					String[] blacklist = {
+							"Name Tag", "Description Tag", "Part: ", "Count Transfer Tool",
+							"Festivizer", "Backpack Expander", "Tour of Duty Ticket", "Taunt: ",
+							"Gift Wrap", "Decal Tool", "Muskelmannbraun", "Dueling Mini-Game",
+							"A Mann's Mint", "Giftapult", "Mann Co. Orange", "Noble Hatter's Violet",
+							"Color No. 216-190-216", "An Air of Debonair", "Ye Olde Rustic Colour",
+							"Bitter Taste of Defeat and Lime", "Drably Olive", "Balaclavas Are Forever",
+							"Indubitably Green", "Team Spirit", "After Eight", "Aged Moustache Grey",
+							"Radigan Conagher Brown", "Value of Teamwork", "Peculiarly Drab Tincture",
+							"Color of a Gentlemann's Business Pants", "Waterlogged Lab Coat",
+							"Zepheniah's Greed", "A Deep Commitment to Purple", "An Extraordinary Abundance of Tinge",
+							"Australium Gold", "Pug Mug", "Rolfe Copter", "Mannvich",
+							"A Distinctive Lack of Hue", "Dark Salmon Injustice", "Eingineer",
+							"Crocodile Mun-Dee", "Scoper's Scales", "Dell in the Shell",
+							"A Shell of a Mann", "Aerobatics Demonstrator", "Pink as Hell",
+							"Remorseless Raptor", "Final Frontier Freighter", "Avian Amante",
+							"Operator's Overalls", "Hovering Hotshot", "War Blunder", "Wild Whip"
+					};
+					for(String b : blacklist) {
+						if(noQualityItemName.startsWith(b)) {
+							doWarn = false;
+							break;
+						}
+					}
+					if(doWarn) {
+						log.warn("Item should have a rarity but could not be matched! " + noQualityItemName);
+				
+					}
+				}
 			}
 			//Map -> obj loops
 			for(Map.Entry<String, Integer> entry : plusMap.entrySet()) {
 				int amt = entry.getValue();
 				if(plusItems.containsKey(entry.getKey())) {
 					amt += (int) plusItems.get(entry.getKey());
-				}
-				if(plusItems.containsKey(entry.getKey())) {
 					plusItems.replace(entry.getKey(), amt);
 				} else {
 					plusItems.put(entry.getKey(), amt);
@@ -437,8 +505,6 @@ public class InventoryFilesParser {
 				int amt = entry.getValue();
 				if(colors.containsKey(entry.getKey())) {
 					amt += (int) colors.get(entry.getKey());
-				}
-				if(colors.containsKey(entry.getKey())) {
 					colors.replace(entry.getKey(), amt);
 				} else {
 					colors.put(entry.getKey(), amt);
@@ -448,11 +514,24 @@ public class InventoryFilesParser {
 				int amt = entry.getValue();
 				if(minusItems.containsKey(entry.getKey())) {
 					amt += (int) minusItems.get(entry.getKey());
-				}
-				if(minusItems.containsKey(entry.getKey())) {
 					minusItems.replace(entry.getKey(), amt);
 				} else {
 					minusItems.put(entry.getKey(), amt);
+				}
+			}
+			for(Map.Entry<String, Integer> entry : rarityMap.entrySet()) {
+				int amt = entry.getValue();
+				if(rarity.containsKey(entry.getKey())) {
+					amt += (int) rarity.get(entry.getKey());
+					if(plusMap.containsKey("Handy Canes")) {
+						//log.info(amt + "");
+					}
+					rarity.replace(entry.getKey(), amt);
+				} else {
+					rarity.put(entry.getKey(), amt);
+					if(plusMap.containsKey("Handy Canes")) {
+						//log.info(amt + "");
+					}
 				}
 			}
 		}
@@ -464,6 +543,7 @@ public class InventoryFilesParser {
 			return resultObject;
 		}
 		plusItems.put("colors", colors);
+		plusItems.put("rarities", rarity);
 		crateObj.put("plus", plusItems);
 		crateObj.put("minus", minusItems);
 		if(resultObject.containsKey(crateName)) { //Has the crate, add to it
@@ -476,6 +556,43 @@ public class InventoryFilesParser {
 		}
 		
 		return resultObject;
+	}
+	
+	private static HashMap<String, String> getCaseRarities(String caseName) {
+		String fileName = "tf2cases.json";
+		HashMap<String, String> out = new HashMap<String, String>();
+		ArrayList<String> rarities = new ArrayList<String>();
+		rarities.add("civilian");
+		rarities.add("freelance");
+		rarities.add("mercenary");
+		rarities.add("commando");
+		rarities.add("assassin");
+		rarities.add("elite");
+		JSONParser parser = new JSONParser();
+		
+		try {
+			JSONObject cases = (JSONObject) parser.parse(new FileReader(fileName));
+			if(!cases.containsKey(caseName)) { //Leave early if case doesn't exist
+				return out;
+			}
+			JSONObject caseObj = (JSONObject) cases.get(caseName);
+			for(String s : rarities) {
+				JSONArray r = (JSONArray) caseObj.get(s);
+				for(int i = 0; i < r.size(); i++) {
+					out.put((String)r.get(i), s);
+				}
+			}
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (ParseException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return out;
 	}
 	
 	public void outputMvmFile() {
@@ -999,6 +1116,22 @@ public class InventoryFilesParser {
 		int totalWep = 0;
 		int totalHaunted = 0;
 		
+		//Case Rarities
+		ArrayList<String> rarityStrings = new ArrayList<String>();
+		rarityStrings.add("civilian");
+		rarityStrings.add("freelance");
+		rarityStrings.add("mercenary");
+		rarityStrings.add("commando");
+		rarityStrings.add("assassin");
+		rarityStrings.add("elite");
+		int totalCiv = 0;
+		int totalFreelance = 0;
+		int totalMerc = 0;
+		int totalComm = 0;
+		int totalAss = 0;
+		int totalElite = 0;
+		int totalRarities = 0;
+		
 		int totalCrates = 0;
 		
 		HashMap<Integer, HashMap<Integer, String>> crateMap = new HashMap<Integer, HashMap<Integer, String>>();
@@ -1072,6 +1205,7 @@ public class InventoryFilesParser {
 					JSONObject crateObj = (JSONObject) obj.get(s);
 					JSONObject cratePlus = (JSONObject) crateObj.get("plus");
 					JSONObject colors = (JSONObject) cratePlus.get("colors");
+					JSONObject rarities = (JSONObject) cratePlus.get("rarities");
 					if(colors.containsKey(uniqueColor)) {
 						totalUnique += (long) colors.get(uniqueColor);
 					}
@@ -1087,6 +1221,35 @@ public class InventoryFilesParser {
 					if(colors.containsKey(hauntedColor)) {
 						totalHaunted += (long) colors.get(hauntedColor);
 					}
+					//Different than ^ bc easy to copy paste arrayList from getCaseRarities method )
+					//Debug temps
+					long tempMerc = 0;
+					long tempComm = 0;
+					long tempAss = 0;
+					long tempElite = 0;
+					if(rarities.containsKey(rarityStrings.get(0))) {
+						totalCiv += (long) rarities.get(rarityStrings.get(0));
+					}
+					if(rarities.containsKey(rarityStrings.get(1))) {
+						totalFreelance += (long) rarities.get(rarityStrings.get(1));
+					}
+					if(rarities.containsKey(rarityStrings.get(2))) {
+						tempMerc = (long) rarities.get(rarityStrings.get(2));
+						totalMerc += tempMerc;
+					}
+					if(rarities.containsKey(rarityStrings.get(3))) {
+						tempComm= (long) rarities.get(rarityStrings.get(3));
+						totalComm += tempComm;
+					}
+					if(rarities.containsKey(rarityStrings.get(4))) {
+						tempAss = (long) rarities.get(rarityStrings.get(4));
+						totalAss += tempAss;
+					}
+					if(rarities.containsKey(rarityStrings.get(5))) {
+						tempElite = (long) rarities.get(rarityStrings.get(5));
+						totalElite += tempElite;
+					}
+					int tempRarities = (int) (tempMerc+tempComm+tempAss+tempElite);
 					if(freeCrateList.contains(s)) {
 						freeCrateMap.put(freeI, s);
 						freeI++;
@@ -1096,21 +1259,33 @@ public class InventoryFilesParser {
 						unlockedCrateMap.put(unlockedI, s);
 						unlockedI++;
 						long amt = (long) crateObj.get("total");
+						if(amt != tempRarities && tempRarities != 0) {
+							log.warn("Rarities and total crates opened does not match for crate " + s + " " + amt + "!=" + tempRarities);
+						}
 						unlockedTotal += amt;
 					} else if(cosmeticCaseList.contains(s) || s.contains("Cosmetic Case")) {
 						cosmeticCaseMap.put(cosmeticI, s);
 						cosmeticI++;
 						long amt = (long) crateObj.get("total");
+						if(amt != tempRarities && tempRarities != 0) {
+							log.warn("Rarities and total crates opened does not match for crate " + s + " " + amt + "!=" + tempRarities);
+						}
 						cosmeticTotal += amt;
 					} else if(skinCaseList.contains(s) || s.contains("Collection") || s.contains("Weapons Case")) {
 						skinCaseMap.put(skinI, s);
 						skinI++;
 						long amt = (long) crateObj.get("total");
+						if(amt != tempRarities && tempRarities != 0) {
+							log.warn("Rarities and total crates opened does not match for crate " + s + " " + amt + "!=" + tempRarities);
+						}
 						skinTotal += amt;
 					} else if(warPaintCaseList.contains(s) || s.contains("War Paint")) {
 						warPaintCaseMap.put(paintI, s);
 						paintI++;
 						long amt = (long) crateObj.get("total");
+						if(amt != tempRarities && tempRarities != 0) {
+							log.warn("Rarities and total crates opened does not match for crate " + s + " " + amt + "!=" + tempRarities);
+						}
 						paintTotal += amt;
 					} else {
 						otherCrateMap.put(otherI, s);
@@ -1119,6 +1294,13 @@ public class InventoryFilesParser {
 						otherTotal += amt;
 					}
 				}
+				totalRarities = totalMerc+totalComm+totalAss+totalElite;
+				double civP = (double)Math.round(((double)totalCiv/(double)totalRarities)*10000) / 100;
+				double freP = (double)Math.round(((double)totalFreelance/(double)totalRarities)*10000) / 100;
+				double merP = (double)Math.round(((double)totalMerc/(double)totalRarities)*10000) / 100;
+				double comP = (double)Math.round(((double)totalComm/(double)totalRarities)*10000) / 100;
+				double assP = (double)Math.round(((double)totalAss/(double)totalRarities)*10000) / 100;
+				double eliP = (double)Math.round(((double)totalElite/(double)totalRarities)*10000) / 100;
 				totalCrates = freeTotal+unlockedTotal+cosmeticTotal+skinTotal+paintTotal+otherTotal;
 				outString += "\t[2] Free Crates : " + freeTotal + "\n";
 				outString += "\t[3] Unlocked Crates : " + unlockedTotal + "\n";
@@ -1131,6 +1313,13 @@ public class InventoryFilesParser {
 						+ "\tTotal Decorated (Weapons) : " + totalWep + "\n"
 						+ "\tTotal Haunted : " + totalHaunted + "\n"
 						+ "\tTotal Unusuals : " + totalUnusual + "\n";
+				outString += "\n\tTotal Graded Items (No civ/freelance for the %): " + totalRarities + "\n"
+						+ "\t\tCivilian : " + totalCiv + "\n"
+						+ "\t\tFreelance : " + totalFreelance + "\n"
+						+ "\t\tMercenary : " + totalMerc + " (" + merP + "%)\n"
+						+ "\t\tCommando : " + totalComm + " (" + comP + "%)\n"
+						+ "\t\tAssassin : " + totalAss + " (" + assP + "%)\n"
+						+ "\t\tElite : " + totalElite + " (" + eliP + "%)\n";
 				outString += "\n\tTotal Unboxes : " + totalCrates + " (" + (totalCrates-freeTotal) + " ignoring free crates)\n";
 				System.out.println(outString + outStringEnd);
 				//Details
@@ -1164,7 +1353,7 @@ public class InventoryFilesParser {
 								//Individual item list first
 								detailedOut += "\tItems Gained: \n";
 								for(String s : plusSet) {
-									if(s.equals("colors")) {
+									if(s.equals("colors") || s.equals("rarities")) {
 										continue;
 									}
 									q = (long) cratePlus.get(s);
