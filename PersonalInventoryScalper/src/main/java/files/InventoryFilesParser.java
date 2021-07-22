@@ -1041,6 +1041,8 @@ public class InventoryFilesParser {
 		cosmeticCaseList.add("Creepy Crawly Case");
 		cosmeticCaseList.add("Gargoyle Case");
 		cosmeticCaseList.add("Spooky Spoils Case");
+		cosmeticCaseList.add("Quarantined Collection Case");
+		cosmeticCaseList.add("Confidential Collection Case");
 		
 		int skinI = 2; //0 is quit, 1 is redisplay
 		int skinTotal = 0;
@@ -1150,10 +1152,7 @@ public class InventoryFilesParser {
 						while(choice2 != 0) {
 							if(choice2 == 1) {
 								System.out.println(categoryOut + outStringEnd);
-							} else {
-								if(!category.containsKey(choice2)) {
-									continue;
-								}
+							} else if(category.containsKey(choice2)) {
 								String crateName = category.get(choice2);
 								detailedOut = crateName + " details: \n";
 								JSONObject crate = (JSONObject)obj.get(crateName);
