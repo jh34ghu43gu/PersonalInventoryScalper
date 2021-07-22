@@ -1160,24 +1160,26 @@ public class InventoryFilesParser {
 								JSONObject cratePlus = (JSONObject)crate.get("plus");
 								Set<String> plusSet = cratePlus.keySet();
 								long total = (long) crate.get("total");
+								long q = 0; //quality total
+								double p = 0; //percent
 								//Individual item list first
 								detailedOut += "\tItems Gained: \n";
 								for(String s : plusSet) {
 									if(s.equals("colors")) {
 										continue;
 									}
-									detailedOut += "\t\t" + s + " : " + cratePlus.get(s) + "\n";
+									q = (long) cratePlus.get(s);
+									p = (double)Math.round(((double)q/(double)total)*10000) / 100;
+									detailedOut += "\t\t" + s + " : " + q + " (" + p + "%)\n";
 								}
 								
 								//Quality of items if they exist
 								detailedOut += "\n\tQuality Totals: \n";
 								JSONObject colors = (JSONObject) cratePlus.get("colors");
-								long q = 0; //quality total
-								double p = 0; //percent
 								if(colors.containsKey(uniqueColor)) {
 									q = (long) colors.get(uniqueColor);
 									p = (double)Math.round(((double)q/(double)total)*10000) / 100;
-									detailedOut += "\t\tUniques : " + q + "(" + p + "%)\n";
+									detailedOut += "\t\tUniques : " + q + " (" + p + "%)\n";
 								}
 								if(colors.containsKey(strangeColor)) {
 									q = (long) colors.get(strangeColor);
