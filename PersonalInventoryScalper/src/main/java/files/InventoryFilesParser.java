@@ -1151,11 +1151,15 @@ public class InventoryFilesParser {
 							if(choice2 == 1) {
 								System.out.println(categoryOut + outStringEnd);
 							} else {
+								if(!category.containsKey(choice2)) {
+									continue;
+								}
 								String crateName = category.get(choice2);
 								detailedOut = crateName + " details: \n";
 								JSONObject crate = (JSONObject)obj.get(crateName);
 								JSONObject cratePlus = (JSONObject)crate.get("plus");
 								Set<String> plusSet = cratePlus.keySet();
+								long total = (long) crate.get("total");
 								//Individual item list first
 								detailedOut += "\tItems Gained: \n";
 								for(String s : plusSet) {
@@ -1164,26 +1168,39 @@ public class InventoryFilesParser {
 									}
 									detailedOut += "\t\t" + s + " : " + cratePlus.get(s) + "\n";
 								}
+								
 								//Quality of items if they exist
 								detailedOut += "\n\tQuality Totals: \n";
 								JSONObject colors = (JSONObject) cratePlus.get("colors");
+								long q = 0; //quality total
+								double p = 0; //percent
 								if(colors.containsKey(uniqueColor)) {
-									detailedOut += "\t\tUniques : " + colors.get(uniqueColor) + "\n";
+									q = (long) colors.get(uniqueColor);
+									p = (double)Math.round(((double)q/(double)total)*10000) / 100;
+									detailedOut += "\t\tUniques : " + q + "(" + p + "%)\n";
 								}
 								if(colors.containsKey(strangeColor)) {
-									detailedOut += "\t\tStranges : " + colors.get(strangeColor) + "\n";
+									q = (long) colors.get(strangeColor);
+									p = (double)Math.round(((double)q/(double)total)*10000) / 100;
+									detailedOut += "\t\tStranges : " + q + "(" + p + "%)\n";
 								}
 								if(colors.containsKey(unusualColor)) {
-									detailedOut += "\t\tUnusuals : " + colors.get(unusualColor) + "\n";
+									q = (long) colors.get(unusualColor);
+									p = (double)Math.round(((double)q/(double)total)*10000) / 100;
+									detailedOut += "\t\tUnusuals : " + q + "(" + p + "%)\n";
 								}
 								if(colors.containsKey(wepColor)) {
-									detailedOut += "\t\tDecorated : " + colors.get(wepColor) + "\n";
+									q = (long) colors.get(wepColor);
+									p = (double)Math.round(((double)q/(double)total)*10000) / 100;
+									detailedOut += "\t\tDecorated : " + q + "(" + p + "%)\n";
 								}
 								if(colors.containsKey(hauntedColor)) {
-									detailedOut += "\t\tHaunted : " + colors.get(hauntedColor) + "\n";
+									q = (long) colors.get(hauntedColor);
+									p = (double)Math.round(((double)q/(double)total)*10000) / 100;
+									detailedOut += "\t\tHaunted : " + q + "(" + p + "%)\n";
 								}
 								//Total and print
-								detailedOut += "\n\tTotal: " + crate.get("total");
+								detailedOut += "\n\tTotal: " + total;
 								System.out.println(detailedOut);
 							}
 							choice2 = scan.nextInt();
