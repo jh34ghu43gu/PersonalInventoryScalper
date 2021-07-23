@@ -1333,7 +1333,7 @@ public class InventoryFilesParser {
 						+ "\tTotal Decorated (Weapons) : " + totalWep + "\n"
 						+ "\tTotal Haunted : " + totalHaunted + "\n"
 						+ "\tTotal Unusuals : " + totalUnusual + "\n";
-				outString += "\n\tTotal Graded Items (No civ/freelance for the %): " + totalRarities + "\n"
+				outString += "\n\tTotal Graded Items (No civ/freelance): " + totalRarities + "\n"
 						+ "\t\tCivilian : " + totalCiv + "\n"
 						+ "\t\tFreelance : " + totalFreelance + "\n"
 						+ "\t\tMercenary : " + totalMerc + " (" + merP + "%)\n"
@@ -1408,6 +1408,41 @@ public class InventoryFilesParser {
 									q = (long) colors.get(hauntedColor);
 									p = (double)Math.round(((double)q/(double)total)*10000) / 100;
 									detailedOut += "\t\tHaunted : " + q + "(" + p + "%)\n";
+								}
+								//Rarity totals if they exist
+								JSONObject rarities = (JSONObject) cratePlus.get("rarities");
+								if(!rarities.isEmpty()) {
+									detailedOut += "\n\tRarity Totals:\n";
+								}
+								if(rarities.containsKey("civilian")) {
+									q = (long) rarities.get("civilian");
+									p = (double)Math.round(((double)q/(double)total)*10000) / 100;
+									detailedOut += "\t\tCivilian : " + q + "(" + p + "%)\n";
+								}
+								if(rarities.containsKey("freelance")) {
+									q = (long) rarities.get("freelance");
+									p = (double)Math.round(((double)q/(double)total)*10000) / 100;
+									detailedOut += "\t\tFreelance : " + q + "(" + p + "%)\n";
+								}
+								if(rarities.containsKey("mercenary")) {
+									q = (long) rarities.get("mercenary");
+									p = (double)Math.round(((double)q/(double)total)*10000) / 100;
+									detailedOut += "\t\tMercenary : " + q + "(" + p + "%)\n";
+								}
+								if(rarities.containsKey("commando")) {
+									q = (long) rarities.get("commando");
+									p = (double)Math.round(((double)q/(double)total)*10000) / 100;
+									detailedOut += "\t\tCommando : " + q + "(" + p + "%)\n";
+								}
+								if(rarities.containsKey("assassin")) {
+									q = (long) rarities.get("assassin");
+									p = (double)Math.round(((double)q/(double)total)*10000) / 100;
+									detailedOut += "\t\tAssassin : " + q + "(" + p + "%)\n";
+								}
+								if(rarities.containsKey("elite")) {
+									q = (long) rarities.get("elite");
+									p = (double)Math.round(((double)q/(double)total)*10000) / 100;
+									detailedOut += "\t\tElite : " + q + "(" + p + "%)\n";
 								}
 								//Total and print
 								detailedOut += "\n\tTotal: " + total;
