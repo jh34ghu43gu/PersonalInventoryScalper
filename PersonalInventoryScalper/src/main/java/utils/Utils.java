@@ -40,7 +40,7 @@ public class Utils {
     public static long dateToUnix(String s) {
     	DateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy hh:mmaZ");
 		try {
-			Date date = dateFormat.parse(s+"-0800"); //Login is done in washington (GMT-0800) and thus times are returned from there
+			Date date = dateFormat.parse(s+"-0700"); //Login is done in washington (GMT-0700) and thus times are returned from there
 			long unixTime = (long) date.getTime()/1000;
 			return unixTime;
 		} catch (ParseException e) {

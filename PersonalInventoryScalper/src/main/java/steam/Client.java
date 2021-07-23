@@ -31,6 +31,7 @@ public class Client implements Runnable {
 	private String username;
 	private String password;
 	private String secret;
+	private long stopTime;
 	
 	private int timeout;
 	
@@ -85,7 +86,7 @@ public class Client implements Runnable {
 	
 	private void onWebAPIUserNonce(WebAPIUserNonceCallback callback) {
 		this.webApiUserNonce = callback.getNonce();
-		log.info("Updated callback nonce: " + webApiUserNonce);
+		log.info("Updated callback nonce");
 	}
 
 	private void onConnected(ConnectedCallback callback) {
@@ -132,47 +133,8 @@ public class Client implements Runnable {
 		log.info("Login successful!");
 		//Startup actions go here if we have any later
 		webApiUserNonce = callback.getWebAPIUserNonce();
-		log.debug("Callback nonce: " + webApiUserNonce);
 		SWH = SteamWebHandler.getInstance();
 		loggedIn = true;
-		/*
-		SWH = SteamWebHandler.getInstance();
-		SWH.setTimeout(timeout);
-		if(SWH.authenticate(steamClient, webApiUserNonce)) {
-			log.info("Authenticated our SteamWebHandler!");
-			long time;
-			long stopTime = 0;
-			ch.getOptions();
-			if(ch.getOptionFromFile("NextInventoryTime").length() > 2) {
-				time = Long.parseLong(ch.getOptionFromFile("NextInventoryTime"));
-			} else {
-				time = Utils.getCurrentUnixTime();
-				stopTime = InventoryFilesManager.getLastTime();
-				log.info("Looking to stop at time: " + stopTime);
-			}
-			long oldTime = time;
-			try {
-				do {
-					oldTime = time;
-					time = SWH.getInventoryHistory(time, stopTime);
-					if(time == 0) {
-						ch.setOptionToFile("NextInventoryTime", String.valueOf(oldTime));
-						log.info("Time returned 0, timeout for: " + timeout*10 + " seconds before retrying.");
-						log.info("If this is the 2nd time you've seen this message you have been logged out and will need to exit and relog.");
-						TimeUnit.SECONDS.sleep(timeout*10);
-						time = oldTime;
-						log.info("Retrying time: " + time);
-						oldTime = 0l; //Switch old time so we can continue with the loop still
-					}
-				} while(oldTime != time && time != -1);
-				ch.setOptionToFile("NextInventoryTime", " ");
-				System.out.println("Finished file creation. Please close and relaunch the application to choose your parsing option.");
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		} else {
-			log.warn("Failed to authenticate our SteamWebHandler!");
-		}*/
     }
 
     private void onLoggedOff(LoggedOffCallback callback) {
@@ -196,8 +158,6 @@ public class Client implements Runnable {
     private void inventoryAction() {
 		if(SWH.isAuthenticated()) {
 			long time;
-			long stopTime = 0;
-			
 			ch.getOptions();
 			if(ch.getOptionFromFile("NextInventoryTime").length() > 2) {
 				time = Long.parseLong(ch.getOptionFromFile("NextInventoryTime"));
