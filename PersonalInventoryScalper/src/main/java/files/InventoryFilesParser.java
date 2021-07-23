@@ -350,6 +350,16 @@ public class InventoryFilesParser {
 			for(String s : items) {
 				JSONObject itemObj = (JSONObject) plus.get(s);
 				String itemName = (String) itemObj.get("itemName");
+				String noQualityItemName = itemName;
+				if(noQualityItemName.startsWith("Strange ")) {
+					noQualityItemName = noQualityItemName.substring(8);
+				}
+				if(noQualityItemName.startsWith("Unusual ")) {
+					noQualityItemName = noQualityItemName.substring(8);
+				}
+				if(noQualityItemName.startsWith("The ")) {
+					noQualityItemName = noQualityItemName.substring(4);
+				}
 				String color = (String) itemObj.get("color");
 				if(plusMap.containsKey(itemName)) {
 					int amt = plusMap.get(itemName) + 1;
@@ -362,6 +372,16 @@ public class InventoryFilesParser {
 					colorMap.put(color, amt);
 				} else {
 					colorMap.put(color, 1);
+				}
+				HashMap<String, String> rarities = InventoryFilesParser.getCaseRarities(crateName);
+				if(!rarities.isEmpty() && rarities.containsKey(noQualityItemName)) {
+					String rarityVal = rarities.get(noQualityItemName);
+					if(rarityMap.containsKey(rarityVal)) {
+						int amt = rarityMap.get(rarityVal) + 1;
+						rarityMap.put(rarityVal, amt);
+					} else {
+						rarityMap.put(rarityVal, 1);
+					}
 				}
 			}
 			for(Map.Entry<String, Integer> entry : plusMap.entrySet()) {
@@ -380,6 +400,15 @@ public class InventoryFilesParser {
 					colors.replace(entry.getKey(), amt);
 				} else {
 					colors.put(entry.getKey(), amt);
+				}
+			}
+			for(Map.Entry<String, Integer> entry : rarityMap.entrySet()) {
+				int amt = entry.getValue();
+				if(rarity.containsKey(entry.getKey())) {
+					amt += (int) rarity.get(entry.getKey());
+					rarity.replace(entry.getKey(), amt);
+				} else {
+					rarity.put(entry.getKey(), amt);
 				}
 			}
 		} else { //Normal crate
@@ -444,9 +473,7 @@ public class InventoryFilesParser {
 					} else {
 						rarityMap.put(rarityVal, 1);
 					}
-					
 				} else if(!rarities.isEmpty()) {
-					
 					boolean doWarn = true;
 					//Manual ones that java can't figure out
 					if(noQualityItemName.endsWith("Polished War Paint")) {
@@ -459,7 +486,6 @@ public class InventoryFilesParser {
 						}
 						doWarn = false;
 					}
-					
 					//Do a warning for future problems
 					String[] blacklist = {
 							"Name Tag", "Description Tag", "Part: ", "Count Transfer Tool",
@@ -523,15 +549,9 @@ public class InventoryFilesParser {
 				int amt = entry.getValue();
 				if(rarity.containsKey(entry.getKey())) {
 					amt += (int) rarity.get(entry.getKey());
-					if(plusMap.containsKey("Handy Canes")) {
-						//log.info(amt + "");
-					}
 					rarity.replace(entry.getKey(), amt);
 				} else {
 					rarity.put(entry.getKey(), amt);
-					if(plusMap.containsKey("Handy Canes")) {
-						//log.info(amt + "");
-					}
 				}
 			}
 		}
