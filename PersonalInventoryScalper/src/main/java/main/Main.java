@@ -78,6 +78,7 @@ public class Main {
 					+ "[2] Squad Surplus Loot\n"
 					+ "[3] Crate unlocks\n"
 					+ "[4] Item Drops\n"
+					+ "[5] Store Purchases\n"
 					+ "[0] Exit program\n";
 			int p = 0;
 			do {
@@ -133,6 +134,19 @@ public class Main {
 					IFP.createDropsFile();
 				}
 				IFP.outputDropsFile();
+			} else if(p == 5) {
+				if(InventoryFilesParser.storePurchaseFileExists()) {
+					System.out.println("Would you like to \n"
+							+ "[1]refreash the store purchase results file \n"
+							+ "[2]or just view it?");
+					p = s.nextInt();
+					if(p == 1) {
+						IFP.createStorePurchaseFile();
+					}
+				} else {
+					IFP.createStorePurchaseFile();
+				}
+				IFP.outputStorePurchaseFile();
 			}
 			System.out.println(baseOut);
 			p = s.nextInt();

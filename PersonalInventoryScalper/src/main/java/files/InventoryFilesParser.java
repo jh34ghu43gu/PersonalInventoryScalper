@@ -33,6 +33,7 @@ public class InventoryFilesParser {
 	private static String surplusFileName = "squadSurplus.txt";
 	private static String unboxFileName = "unboxes.txt";
 	private static String dropsFileName = "itemDrops.txt";
+	private static String storePurchaseFileName = "storePurchases.txt";
 	
 	public static void makeDir() {
 		File dir = new File(directory);
@@ -59,6 +60,11 @@ public class InventoryFilesParser {
 	
 	public static boolean dropsFileExists() {
 		File surplus = new File(directory + "/" + dropsFileName);
+		return surplus.exists();
+	}
+	
+	public static boolean storePurchaseFileExists() {
+		File surplus = new File(directory + "/" + storePurchaseFileName);
 		return surplus.exists();
 	}
 	
@@ -681,6 +687,66 @@ public class InventoryFilesParser {
 		return true;
 	}
 	
+	public boolean createStorePurchaseFile() {
+		File invDir = new File(inventoryDirectory);
+		File[] invFiles = invDir.listFiles();
+		JSONParser parser = new JSONParser();
+		JSONObject purchaseObject = new JSONObject();
+		HashMap<String, Integer> itemsGained = new HashMap<String, Integer>();
+		for(File f : invFiles) {
+			try {
+				JSONObject obj = (JSONObject) parser.parse(new FileReader(f));
+				Set<String> set = obj.keySet();
+				for(String s : set) {
+					JSONObject trade = (JSONObject) obj.get(s);
+					if(trade.get("event_description").equals("Purchased from the store")) {
+						JSONObject plusObj = (JSONObject) trade.get("plus");
+						Set<String> tradeSet = plusObj.keySet();
+						for(String s2 : tradeSet) {
+							JSONObject item = (JSONObject) plusObj.get(s2);
+							String itemName = (String) item.get("itemName");
+							if(itemsGained.containsKey(itemName)) { //Already in map, iterate
+								int amt = itemsGained.get(itemName)+1;
+								itemsGained.put(itemName, amt);
+							} else { //Not in map, add it
+								itemsGained.put(itemName, 1);
+							}
+						}
+					}
+				}
+			} catch (FileNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				return false;
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				return false;
+			} catch (ParseException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				return false;
+			}
+		}
+		for(Map.Entry<String, Integer> entry : itemsGained.entrySet()) {
+			purchaseObject.put(entry.getKey(), entry.getValue());
+		}
+		try {
+			Gson gson = new GsonBuilder().setPrettyPrinting().create();
+			String s = gson.toJson(purchaseObject);
+			FileWriter writer = new FileWriter(directory + "/" + storePurchaseFileName);
+			writer.write(s);
+			writer.flush();
+			writer.close();
+			log.info("Created store purchases file.");
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return false;
+		}
+		return true;
+	}
+	
 	public void outputMvmFile() {
 		if(!mvmFileExists()) { 
 			log.warn("Could not read mvm file, it does not exist!");
@@ -1179,7 +1245,7 @@ public class InventoryFilesParser {
 			scan.close();
 		} catch (IOException | ParseException e) {
 			// TODO Auto-generated catch block
-			log.error("Error parsing mvm file.");
+			log.error("Error parsing surplus file.");
 			e.printStackTrace();
 		}
 	}
@@ -1629,7 +1695,57 @@ public class InventoryFilesParser {
 			scan.close();
 		} catch (IOException | ParseException e) {
 			// TODO Auto-generated catch block
-			log.error("Error parsing mvm file.");
+			log.error("Error parsing item drops file.");
+			e.printStackTrace();
+		}
+	}
+	
+	public void outputStorePurchaseFile() {
+		if(!dropsFileExists()) { 
+			log.warn("Could not read store purchases file, it does not exist!");
+			return;
+		}
+		JSONParser parser = new JSONParser();
+		ArrayList<String> items = new ArrayList<String>();
+		HashMap<String, Long> itemsMap = new HashMap<String, Long>();
+		
+		try {
+			JSONObject obj = (JSONObject) parser.parse(new FileReader(directory + "/" + storePurchaseFileName));
+			Set<String> set = obj.keySet();
+			for(String s : set) {
+				String name = s;
+				if(name.startsWith("The")) {
+					name = name.substring(3).trim();
+				} else {
+					//log.info(name);
+				}
+				//Is item
+				long amt = (long) obj.get(s);
+				for(int i = 0; i < amt; i++) {
+					items.add(name);
+				}
+				itemsMap.put(name, amt);
+				
+			}
+			String out = "Item Drops Results: \n"
+					+ "\t[2]All items: " + items.size() + "\n"
+					+ "Select a number for all items, [1] to view this list again, or [0] to go back.";
+			
+			System.out.println(out);
+			Scanner scan = new Scanner(System.in);
+			int choice = scan.nextInt();
+			while(choice != 0) {
+				if(choice == 1) {
+					System.out.println(out);
+				} else if(choice == 2) {
+					System.out.println(mapToString(itemsMap));
+				}
+				choice = scan.nextInt();
+			}
+			scan.close();
+		} catch (IOException | ParseException e) {
+			// TODO Auto-generated catch block
+			log.error("Error parsing store purchases file.");
 			e.printStackTrace();
 		}
 	}
