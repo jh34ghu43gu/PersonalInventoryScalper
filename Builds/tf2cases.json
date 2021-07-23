@@ -11,7 +11,7 @@
 		"Masked Mender Medi Gun",
 		"King of the Jungle Minigun",
 		"Backwoods Boomstick Shotgun",
-		"Woodsy Widowmaker Submachine Gun",
+		"Woodsy Widowmaker SMG",
 		"Night Owl Sniper Rifle"
 	]
 	"commando": [
@@ -23,7 +23,7 @@
 	"assassin": [
 		"Sudden Flurry Stickybomb Launcher",
 		"Purple Range Sniper Rifle",
-		Psychedelic Slugger Revolver"
+		"Psychedelic Slugger Revolver"
 	]
 	"elite": [
 		"Red Rock Roscoe Pistol",
@@ -40,7 +40,7 @@
 	"mercenary": [
 		"Lightning Rod Shotgun",
 		"Turbine Torcher Flame Thrower",
-		"Low Profile Submachine Gun",
+		"Low Profile SMG",
 		"Aqua Marine Rocket Launcher",
 		"Brick House Minigun"
 	]
@@ -212,8 +212,8 @@
 	]
 	"assassin": [
 		"Balloonicorn Flame Thrower",
-		"Balloonicorn Stickybomb Launcher",
-		"Balloonicorn Grenade Launcher",
+		"Sweet Dreams Stickybomb Launcher",
+		"Sweet Dreams Grenade Launcher",
 		"Balloonicorn Sniper Rifle"
 	]
 	"elite": [

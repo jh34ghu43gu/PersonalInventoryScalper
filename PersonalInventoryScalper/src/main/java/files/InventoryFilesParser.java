@@ -32,6 +32,7 @@ public class InventoryFilesParser {
 	private static String mvmFileName = "mvm.txt";
 	private static String surplusFileName = "squadSurplus.txt";
 	private static String unboxFileName = "unboxes.txt";
+	private static String dropsFileName = "itemDrops.txt";
 	
 	public static void makeDir() {
 		File dir = new File(directory);
@@ -53,6 +54,11 @@ public class InventoryFilesParser {
 	
 	public static boolean unboxFileExists() {
 		File surplus = new File(directory + "/" + unboxFileName);
+		return surplus.exists();
+	}
+	
+	public static boolean dropsFileExists() {
+		File surplus = new File(directory + "/" + dropsFileName);
 		return surplus.exists();
 	}
 	
@@ -613,6 +619,66 @@ public class InventoryFilesParser {
 			e.printStackTrace();
 		}
 		return out;
+	}
+	
+	public boolean createDropsFile() {
+		File invDir = new File(inventoryDirectory);
+		File[] invFiles = invDir.listFiles();
+		JSONParser parser = new JSONParser();
+		JSONObject dropsObject = new JSONObject();
+		HashMap<String, Integer> itemsGained = new HashMap<String, Integer>();
+		for(File f : invFiles) {
+			try {
+				JSONObject obj = (JSONObject) parser.parse(new FileReader(f));
+				Set<String> set = obj.keySet();
+				for(String s : set) {
+					JSONObject trade = (JSONObject) obj.get(s);
+					if(trade.get("event_description").equals("Found")) {
+						JSONObject plusObj = (JSONObject) trade.get("plus");
+						Set<String> tradeSet = plusObj.keySet();
+						for(String s2 : tradeSet) {
+							JSONObject item = (JSONObject) plusObj.get(s2);
+							String itemName = (String) item.get("itemName");
+							if(itemsGained.containsKey(itemName)) { //Already in map, iterate
+								int amt = itemsGained.get(itemName)+1;
+								itemsGained.put(itemName, amt);
+							} else { //Not in map, add it
+								itemsGained.put(itemName, 1);
+							}
+						}
+					}
+				}
+			} catch (FileNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				return false;
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				return false;
+			} catch (ParseException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				return false;
+			}
+		}
+		for(Map.Entry<String, Integer> entry : itemsGained.entrySet()) {
+			dropsObject.put(entry.getKey(), entry.getValue());
+		}
+		try {
+			Gson gson = new GsonBuilder().setPrettyPrinting().create();
+			String s = gson.toJson(dropsObject);
+			FileWriter writer = new FileWriter(directory + "/" + dropsFileName);
+			writer.write(s);
+			writer.flush();
+			writer.close();
+			log.info("Created item drops file.");
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return false;
+		}
+		return true;
 	}
 	
 	public void outputMvmFile() {
@@ -1467,6 +1533,107 @@ public class InventoryFilesParser {
 			}
 		
 	}
+	
+	public void outputDropsFile() {
+		if(!dropsFileExists()) { 
+			log.warn("Could not read item drops file, it does not exist!");
+			return;
+		}
+		JSONParser parser = new JSONParser();
+		ArrayList<String> weapons = new ArrayList<String>();
+		HashMap<String, Long> weaponsMap = new HashMap<String, Long>();
+		ArrayList<String> crates = new ArrayList<String>();
+		HashMap<String, Long> cratesMap = new HashMap<String, Long>();
+		ArrayList<String> chemSets = new ArrayList<String>();
+		HashMap<String, Long> chemSetsMap = new HashMap<String, Long>();
+		ArrayList<String> items = new ArrayList<String>();
+		HashMap<String, Long> itemsMap = new HashMap<String, Long>();
+		
+		try {
+			JSONObject obj = (JSONObject) parser.parse(new FileReader(directory + "/" + dropsFileName));
+			JSONObject weaponsObj = (JSONObject) parser.parse(new FileReader("tf2weapons.json"));
+			JSONArray weaponsJSONArr = (JSONArray) weaponsObj.get("weapons");
+			ArrayList<String> weaponsArr = new ArrayList<String>();
+			for (int i = 0; i < weaponsJSONArr.size(); i++) {
+				JSONObject wep = (JSONObject) weaponsJSONArr.get(i);
+				String wepStr = wep.values().toString().replace('[', ' ');
+				wepStr = wepStr.replace(']', ' ');
+				wepStr = wepStr.trim();
+				weaponsArr.add(wepStr);
+			}
+			Set<String> set = obj.keySet();
+			for(String s : set) {
+				String name = s;
+				if(name.startsWith("The")) {
+					name = name.substring(3).trim();
+				} else {
+					//log.info(name);
+				}
+				
+				//Doesn't like the special punctuation so special case, idk why cloak doesn't work and CBA
+				if(weaponsArr.contains(name) || name.startsWith("Claidheamh") || name.startsWith("Cloak and Dagger")) {
+					//Is weapon
+					long amt = (long) obj.get(s);
+					for(int i = 0; i < amt; i++) {
+						weapons.add(name);
+					}
+					weaponsMap.put(name, amt);
+				} else if(name.contains("Case") || name.contains("Munition") || name.contains("Crate")
+						|| name.equals("Mann Co. Audition Reel") || name.equals("Mann Co. Director's Cut Reel")) {
+					//Is crate/case
+					long amt = (long) obj.get(s);
+					for(int i = 0; i < amt; i++) {
+						crates.add(name);
+					}
+					cratesMap.put(name, amt);
+				} else if(name.contains("Chemistry Set")) {
+					//Is chem set
+					long amt = (long) obj.get(s);
+					for(int i = 0; i < amt; i++) {
+						chemSets.add(name);
+					}
+					chemSetsMap.put(name, amt);
+				} else {
+					//Is item
+					long amt = (long) obj.get(s);
+					for(int i = 0; i < amt; i++) {
+						items.add(name);
+					}
+					itemsMap.put(name, amt);
+				}
+			}
+			String out = "Item Drops Results: \n"
+					+ "\t[2]Weapons: " + weapons.size() + "\n"
+					+ "\t[3]Crates: " + crates.size() + "\n"
+					+ "\t[4]Chemistry Sets (Strangifier or collectors): " + chemSets.size() + "\n"
+					+ "\t[5]Other (hats/paints/etc...): " + items.size() + "\n"
+					+ "Select a number for all items, [1] to view this list again, or [0] to go back.";
+			
+			System.out.println(out);
+			Scanner scan = new Scanner(System.in);
+			int choice = scan.nextInt();
+			while(choice != 0) {
+				if(choice == 1) {
+					System.out.println(out);
+				} else if(choice == 2) {
+					System.out.println(mapToString(weaponsMap));
+				} else if(choice == 3) {
+					System.out.println(mapToString(cratesMap));
+				} else if(choice == 4) {
+					System.out.println(mapToString(chemSetsMap));
+				} else if(choice == 5) {
+					System.out.println(mapToString(itemsMap));
+				}
+				choice = scan.nextInt();
+			}
+			scan.close();
+		} catch (IOException | ParseException e) {
+			// TODO Auto-generated catch block
+			log.error("Error parsing mvm file.");
+			e.printStackTrace();
+		}
+	}
+	
 	
 	private static String mapToString(Map<String, Long> map) {
 		String out = "";
