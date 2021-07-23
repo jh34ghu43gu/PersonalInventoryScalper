@@ -26,5 +26,5 @@
  There is an approx. rate limit of 600 /InventoryHistory/ requests per ip per ~12(?) hours. If you have a large trade/market hstory collecting all your files will require multiple days (my main account had 728 requests so thus was done over the course of 2 days). You get 50 results per request so if you want an estimate do your (trades + market history + mvm mission count)/50 and then add another 50-200 depending on how much crafting you do and how long you've played.
  
  # Known bug(s)
- *Trying to backtrack to the "main menu" from a submenu will crash. (But not from a sub-submenu back to the submenu).
- *Sometimes steam will report "Unknown asset, I have only observed it for scm listings so it should be ok, will maybe add an error check and attempt to refresh that file later.
+ #### Trying to backtrack to the "main menu" from a submenu will crash. (But not from a sub-submenu back to the submenu).
+ #### Sometimes steam will report "Unknown asset", I have only observed it for scm listings so it should be ok, will maybe add an error check and attempt to refresh that file later.
