@@ -105,7 +105,7 @@ public class InventoryFilesParser {
 						if(operation.equalsIgnoreCase("Operation Oil Spill Badge")) {
 							for(Map.Entry<String, Integer> entry : itemsGained.entrySet()) {
 								if(osItemsGained.containsKey(entry.getKey())) { //Already in map, iterate
-									int amt = osItemsGained.get(entry.getKey())+1;
+									int amt = osItemsGained.get(entry.getKey())+entry.getValue();
 									osItemsGained.put(entry.getKey(), amt);
 								} else { //Not in map, add it
 									osItemsGained.put(entry.getKey(), entry.getValue());
@@ -114,7 +114,7 @@ public class InventoryFilesParser {
 						} else if(operation.equalsIgnoreCase("Operation Steel Trap Badge")) {
 							for(Map.Entry<String, Integer> entry : itemsGained.entrySet()) {
 								if(stItemsGained.containsKey(entry.getKey())) { //Already in map, iterate
-									int amt = stItemsGained.get(entry.getKey())+1;
+									int amt = stItemsGained.get(entry.getKey())+entry.getValue();
 									stItemsGained.put(entry.getKey(), amt);
 								} else { //Not in map, add it
 									stItemsGained.put(entry.getKey(), entry.getValue());
@@ -123,7 +123,7 @@ public class InventoryFilesParser {
 						} else if(operation.equalsIgnoreCase("Operation Mecha Engine Badge")) {
 							for(Map.Entry<String, Integer> entry : itemsGained.entrySet()) {
 								if(meItemsGained.containsKey(entry.getKey())) { //Already in map, iterate
-									int amt = meItemsGained.get(entry.getKey())+1;
+									int amt = meItemsGained.get(entry.getKey())+entry.getValue();
 									meItemsGained.put(entry.getKey(), amt);
 								} else { //Not in map, add it
 									meItemsGained.put(entry.getKey(), entry.getValue());
@@ -132,7 +132,7 @@ public class InventoryFilesParser {
 						} else if(operation.equalsIgnoreCase("Operation Two Cities Badge")) {
 							for(Map.Entry<String, Integer> entry : itemsGained.entrySet()) {
 								if(tcItemsGained.containsKey(entry.getKey())) { //Already in map, iterate
-									int amt = tcItemsGained.get(entry.getKey())+1;
+									int amt = tcItemsGained.get(entry.getKey())+entry.getValue();
 									tcItemsGained.put(entry.getKey(), amt);
 								} else { //Not in map, add it
 									tcItemsGained.put(entry.getKey(), entry.getValue());
@@ -141,7 +141,7 @@ public class InventoryFilesParser {
 						} else if(operation.equalsIgnoreCase("Operation Gear Grinder Badge")) {
 							for(Map.Entry<String, Integer> entry : itemsGained.entrySet()) {
 								if(ggItemsGained.containsKey(entry.getKey())) { //Already in map, iterate
-									int amt = ggItemsGained.get(entry.getKey())+1;
+									int amt = ggItemsGained.get(entry.getKey())+entry.getValue();
 									ggItemsGained.put(entry.getKey(), amt);
 								} else { //Not in map, add it
 									ggItemsGained.put(entry.getKey(), entry.getValue());
