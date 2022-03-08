@@ -1,3 +1,6 @@
+# Recommended to use https://github.com/jh34ghu43gu/SteamInventoryHistoryV2 instead. This is no longer maintained and probably has security issues in some dependencies by now.
+Newer method I found doesn't appear to have a hard daily rate limit either and doesn't require the application to login on your behalf. 
+
 # PersonalInventoryScalper
  Tf2 inventory history tool
 
